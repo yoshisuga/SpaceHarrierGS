@@ -121,9 +121,39 @@ Taille          equ  16
             stz    FrameTimer
             stz    QuitFlag
 
-            ; Border 4 = white: entering game loop
+            ; One-time clear of SHR screen so sky pixels are color 0
+            jsr    ClearScreen
+
+            ; Fill right 32 bytes of every row with $11 (color 1 = sidebar)
+            ; Color 1 is set to black in sky palettes so the strip stays dark.
+            ldx    #0
+            lda    #$1111
+:sidebar    stal   $E12000+128,x       ; byte 128
+            stal   $E12000+130,x
+            stal   $E12000+132,x
+            stal   $E12000+134,x
+            stal   $E12000+136,x
+            stal   $E12000+138,x
+            stal   $E12000+140,x
+            stal   $E12000+142,x
+            stal   $E12000+144,x
+            stal   $E12000+146,x
+            stal   $E12000+148,x
+            stal   $E12000+150,x
+            stal   $E12000+152,x
+            stal   $E12000+154,x
+            stal   $E12000+156,x
+            stal   $E12000+158,x       ; byte 158-159
+            txa
+            clc
+            adc    #160                  ; next row
+            tax
+            cpx    #160*200              ; all 200 rows
+            bcc    :sidebar
+
+            ; Border off: entering game loop
             sep    #$20
-            lda    #$0F
+            lda    #$00
             stal   $E0C034
             rep    #$20
 
@@ -133,7 +163,14 @@ Taille          equ  16
 
 :gameloop
             jsr    WaitVBL
-            jsr    ClearScreen
+
+            ; Poll keyboard — movement + ESC
+            jsr    HandleInput
+            lda    QuitFlag
+            BNEL   _quit
+
+            ; Update horizon from Harrier's vertical position
+            jsr    UpdateHorizon
 
             ; Advance ground scroll (forward motion)
             sep    #$20
@@ -144,8 +181,12 @@ Taille          equ  16
 :yok        sta    Coordonnee_Y
             rep    #$20
 
-            ; Set up perspective-correct SCBs for checkerboard
+            ; Clear play area (sky + ground, 128 bytes per row)
+            jsr    ClearScreen
+
+            ; Set up SCBs: checker palette banding + sky gradient
             jsr    SetupDamierSCB
+            jsr    SetupSkySCB
 
             ; Y = screen address of horizon row
             lda    Ligne_Damier
@@ -215,13 +256,8 @@ _DrawMan    equ    *-3                ; points to the 3-byte JSL operand
             sta    _DrawMan+2
             rep    #$20
 
-            ; Poll keyboard — movement + ESC
-            jsr    HandleInput
-
-            lda    QuitFlag
-            bne    :quit
             jmp    :gameloop
-:quit
+_quit
 
 DoQuit      jsr    SHR_Off
             _MTShutDown
@@ -243,15 +279,132 @@ WaitVBL
 ; Temporary — will be replaced by FTA's compiled Clear_Rout
 ; =====================================================================
 ClearScreen
-            ; Only clear sky area (rows 0 to horizon)
-            ; Ligne_Damier * $A0 = bytes to clear
+            ; Clear play area (128 bytes/row × 200 rows) via DP trick
+            ldal   $E1C068
+            ora    #$30               ; enable RAMRD+RAMWRT
+            stal   $E1C068
+
+            lda    #$2000             ; SHR screen base
+            tcd                       ; DP = first row
+            ldx    #200               ; all 200 rows
+
+:row        stz    $00
+            stz    $02
+            stz    $04
+            stz    $06
+            stz    $08
+            stz    $0A
+            stz    $0C
+            stz    $0E
+            stz    $10
+            stz    $12
+            stz    $14
+            stz    $16
+            stz    $18
+            stz    $1A
+            stz    $1C
+            stz    $1E
+            stz    $20
+            stz    $22
+            stz    $24
+            stz    $26
+            stz    $28
+            stz    $2A
+            stz    $2C
+            stz    $2E
+            stz    $30
+            stz    $32
+            stz    $34
+            stz    $36
+            stz    $38
+            stz    $3A
+            stz    $3C
+            stz    $3E
+            stz    $40
+            stz    $42
+            stz    $44
+            stz    $46
+            stz    $48
+            stz    $4A
+            stz    $4C
+            stz    $4E
+            stz    $50
+            stz    $52
+            stz    $54
+            stz    $56
+            stz    $58
+            stz    $5A
+            stz    $5C
+            stz    $5E
+            stz    $60
+            stz    $62
+            stz    $64
+            stz    $66
+            stz    $68
+            stz    $6A
+            stz    $6C
+            stz    $6E
+            stz    $70
+            stz    $72
+            stz    $74
+            stz    $76
+            stz    $78
+            stz    $7A
+            stz    $7C
+            stz    $7E               ; 64 STZ = 128 bytes = play area only
+            tdc
+            clc
+            adc    #$A0              ; next row
+            tcd
+            dex
+            beq    :clrDone
+            brl    :row
+:clrDone
+
             lda    #0
-            ldx    #0
-:clr        stal   SHR_SCREEN,x
-            inx
-            inx
-            cpx    #$89*$A0           ; horizon row 137 × 160 bytes
-            bcc    :clr
+            tcd                       ; restore DP = 0
+            ldal   $E1C068
+            and    #$FFCF            ; disable RAMRD+RAMWRT
+            stal   $E1C068
+            rts
+
+; =====================================================================
+; UpdateHorizon — map Harrier's Y position to horizon row (Ligne_Damier)
+;
+; HarrierRow 0 (top) → Ligne_Damier 130 (horizon high, less sky)
+; HarrierRow 184 (bottom) → Ligne_Damier 140 (horizon low, more sky)
+; Matches FTA's concept: moving the character down makes you "look up".
+; Range 130-140 keeps checker within SHR bounds (140+60=200).
+; =====================================================================
+UpdateHorizon
+            lda    HarrierRow
+            lsr
+            lsr
+            lsr
+            lsr                       ; /16 → 0..11
+            clc
+            adc    #130
+            cmp    #141
+            bcc    :ok
+            lda    #140
+:ok         sta    Ligne_Damier
+            rts
+
+; =====================================================================
+; SetupSkySCB — assign sky gradient palettes per row (per-frame)
+; Reads Table_Ciel from horizon upward to row $1B.
+; =====================================================================
+SetupSkySCB
+            sep    #$20
+            ldx    Ligne_Damier       ; start at horizon
+            ldy    #0
+:skyloop    lda    Table_Ciel,y
+            stal   SHR_SCB,x
+            iny
+            dex
+            cpx    #$1B               ; stop at row 27 (HUD area)
+            bne    :skyloop
+            rep    #$20
             rts
 
 ; =====================================================================
@@ -457,16 +610,16 @@ SetupPalettes
             bcc    :clr
 
             ; FTA game palette (from sprite .PIC files: ARBRE, ENEMI, MAN, etc.)
-            ; All sprite source files share this palette for colors 0-F.
+            ; Colors $4/$E are the two checkerboard stripe colors.
             lda    #$0000           ; 0: black (background/transparent)
             stal   SHR_PALETTES+$00
-            lda    #$0244           ; 1: dark blue
+            lda    #$0000           ; 1: black (sidebar strip)
             stal   SHR_PALETTES+$02
             lda    #$0466           ; 2: blue-grey
             stal   SHR_PALETTES+$04
             lda    #$0449           ; 3: blue
             stal   SHR_PALETTES+$06
-            lda    #$0CF8           ; 4: light cream/green (checker light)
+            lda    #$0EEA           ; 4: pale warm cream (checker light)
             stal   SHR_PALETTES+$08
             lda    #$0092           ; 5: green
             stal   SHR_PALETTES+$0A
@@ -486,7 +639,7 @@ SetupPalettes
             stal   SHR_PALETTES+$18
             lda    #$0062           ; D: dark green
             stal   SHR_PALETTES+$1A
-            lda    #$0072           ; E: dark green (checker dark)
+            lda    #$0AA5           ; E: medium sage (checker dark)
             stal   SHR_PALETTES+$1C
             lda    #$0FFF           ; F: white
             stal   SHR_PALETTES+$1E
@@ -515,10 +668,112 @@ SetupPalettes
             bne    :cppal
 
             ; Palette 1: swap colors $4 and $E for checkerboard alternation
-            lda    #$0CF8             ; color $4 value → palette 1 color $E
+            lda    #$0EEA             ; color $4 value → palette 1 color $E
             stal   SHR_PALETTES+$3C   ; palette 1 ($20) + color $E ($1C)
-            lda    #$0072             ; color $E value → palette 1 color $4
+            lda    #$0AA5             ; color $E value → palette 1 color $4
             stal   SHR_PALETTES+$28   ; palette 1 ($20) + color $4 ($08)
+
+            ; Sky gradient: set colors 0, $4, $E in palettes 4-15
+            ; FTA's Install_Color: dark blue near horizon → bright warm mid-sky → dark at top
+            ; Color 0 = sky background (our sky pixels are 0)
+            ; Colors $4/$E = sky versions (so checker colors don't bleed into sky)
+
+            ; Palette 4 (near horizon): dark muted blue
+            lda    #$0225
+            stal   SHR_PALETTES+$80        ; color 0
+            stal   SHR_PALETTES+$88        ; color $4
+            stal   SHR_PALETTES+$9C        ; color $E
+
+            ; Palette 5
+            lda    #$0226
+            stal   SHR_PALETTES+$A0        ; color 0
+            stal   SHR_PALETTES+$BC        ; color $E
+            lda    #$0227
+            stal   SHR_PALETTES+$A8        ; color $4
+
+            ; Palette 6
+            lda    #$0227
+            stal   SHR_PALETTES+$C0        ; color 0
+            stal   SHR_PALETTES+$C8        ; color $4
+            stal   SHR_PALETTES+$DC        ; color $E
+
+            ; Palette 7
+            lda    #$0228
+            stal   SHR_PALETTES+$E0        ; color 0
+            stal   SHR_PALETTES+$FC        ; color $E
+            lda    #$0229
+            stal   SHR_PALETTES+$E8        ; color $4
+
+            ; Palette 8
+            lda    #$022A
+            stal   SHR_PALETTES+$100       ; color 0
+            stal   SHR_PALETTES+$11C       ; color $E
+            lda    #$022B
+            stal   SHR_PALETTES+$108       ; color $4
+
+            ; Palette 9
+            lda    #$022C
+            stal   SHR_PALETTES+$120       ; color 0
+            stal   SHR_PALETTES+$13C       ; color $E
+            lda    #$022D
+            stal   SHR_PALETTES+$128       ; color $4
+
+            ; Palette 10
+            lda    #$022E
+            stal   SHR_PALETTES+$140       ; color 0
+            stal   SHR_PALETTES+$15C       ; color $E
+            lda    #$033D
+            stal   SHR_PALETTES+$148       ; color $4
+
+            ; Palette 11
+            lda    #$044C
+            stal   SHR_PALETTES+$160       ; color 0
+            stal   SHR_PALETTES+$17C       ; color $E
+            lda    #$055B
+            stal   SHR_PALETTES+$168       ; color $4
+
+            ; Palette 12
+            lda    #$066A
+            stal   SHR_PALETTES+$180       ; color 0
+            stal   SHR_PALETTES+$19C       ; color $E
+            lda    #$0779
+            stal   SHR_PALETTES+$188       ; color $4
+
+            ; Palette 13
+            lda    #$0888
+            stal   SHR_PALETTES+$1A0       ; color 0
+            stal   SHR_PALETTES+$1BC       ; color $E
+            lda    #$0997
+            stal   SHR_PALETTES+$1A8       ; color $4
+
+            ; Palette 14
+            lda    #$0AA6
+            stal   SHR_PALETTES+$1C0       ; color 0
+            stal   SHR_PALETTES+$1DC       ; color $E
+            lda    #$0BB5
+            stal   SHR_PALETTES+$1C8       ; color $4
+
+            ; Palette 15 (mid-sky, brightest)
+            lda    #$0CC4
+            stal   SHR_PALETTES+$1E0       ; color 0
+            stal   SHR_PALETTES+$1FC       ; color $E
+            lda    #$0DD3
+            stal   SHR_PALETTES+$1E8       ; color $4
+
+            ; Set color 1 to black in sky palettes (4-15) for sidebar strip
+            lda    #$0000
+            stal   SHR_PALETTES+$82        ; palette 4, color 1
+            stal   SHR_PALETTES+$A2        ; palette 5
+            stal   SHR_PALETTES+$C2        ; palette 6
+            stal   SHR_PALETTES+$E2        ; palette 7
+            stal   SHR_PALETTES+$102       ; palette 8
+            stal   SHR_PALETTES+$122       ; palette 9
+            stal   SHR_PALETTES+$142       ; palette 10
+            stal   SHR_PALETTES+$162       ; palette 11
+            stal   SHR_PALETTES+$182       ; palette 12
+            stal   SHR_PALETTES+$1A2       ; palette 13
+            stal   SHR_PALETTES+$1C2       ; palette 14
+            stal   SHR_PALETTES+$1E2       ; palette 15
 
             rts
 
@@ -1296,6 +1551,27 @@ FrameTimer  ds    2
 QuitFlag    ds    2
 Ligne_Damier da   $C5-$3C           ; horizon line (same as FTA)
 Coordonnee_X da   0                 ; horizontal scroll position
+
+; Table_Ciel — sky gradient palette assignments per row
+; Read from horizon downward (row 137→27). Each byte = palette number.
+; Matches FTA's SPACE.S: palettes 4-15 create blue gradient.
+Table_Ciel
+            ds    5,4                ; 5 rows of palette 4  (darkest)
+            ds    4,5
+            ds    3,6
+]_A         =     7
+            lup   9
+            ds    6,]_A
+]_A         =     ]_A+1
+            --^
+            ds    3,]_A-1
+]_A         =     ]_A-1
+            lup   8
+]_A         =     ]_A-1
+            ds    6,]_A
+            --^
+            ds    6,5
+            ds    3,4                ; near top: back to dark
 
 ; =====================================================================
 ; Quit record / app state
