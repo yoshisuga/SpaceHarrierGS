@@ -25,17 +25,17 @@ SHR_PALETTES  equ  $E19E00
 
 ; === FTA compiled routine addresses ===
 NEWPAGE0        equ  $0F00
-TABLE_ROUT      equ  $03F100
-Damier_Rout     equ  $040000
-TSB_Rout        equ  $050000
-Buf_SCB         equ  $05FF00
-Clear_Rout      equ  $0E0000     ; moved from $060000 (our code bank)
-Man_Rout        equ  $070000
-Mountain_Rout   equ  $080000
-ROUT0           equ  $0B0000
-ROUT1           equ  $0C0000
-ROUT2           equ  $0D0000
-Chiffre_Rout    equ  $0F0000
+TABLE_ROUT      equ  $10F100     ; dispatch table (bank $10)
+Damier_Rout     equ  $110000     ; compiled checkerboard (bank $11)
+TSB_Rout        equ  $110000
+Buf_SCB         equ  $11FF00
+Clear_Rout      equ  $120000     ; compiled clear routine (bank $12)
+Man_Rout        equ  $130000     ; compiled Harrier sprites (bank $13)
+Mountain_Rout   equ  $140000
+ROUT0           equ  $150000
+ROUT1           equ  $160000
+ROUT2           equ  $170000
+Chiffre_Rout    equ  $180000
 
 ; === FTA game constants ===
 Box_Lgn         equ  $1C
@@ -86,129 +86,332 @@ Taille          equ  16
 
             jsr    SHR_Init
             jsr    SetupLoadPalette
+
+            sep    #$20
+            lda    #$01              ; blue = loading assets
+            stal   $E0C034
+            rep    #$20
             jsr    LoadAssets
 
+            jsr    ENTER
+
+            sep    #$20
+            lda    #$09              ; yellow = compiling sprites
+            stal   $E0C034
+            rep    #$20
             jsr    CompileSprites
+
+            sep    #$20
+            lda    #$0F              ; white = setting palettes
+            stal   $E0C034
+            rep    #$20
             jsr    SetupPalettes
 
+            sep    #$20
+            lda    #$00              ; black = entering game loop
+            stal   $E0C034
+            rep    #$20
+
+            ; Initialize Harrier state
+            lda    #140
+            sta    HarrierRow
+            lda    #60
+            sta    HarrierCol
+            stz    Shape_Man
+            stz    FrameTimer
+            stz    QuitFlag
+
+            ; Border 4 = white: entering game loop
+            sep    #$20
+            lda    #$0F
+            stal   $E0C034
+            rep    #$20
+
 ; =====================================================================
-; Game loop — draw Harrier sprite, wait for ESC
+; Game loop — erase old sprite, draw new, handle input, animate
 ; =====================================================================
-; The compiled sprite expects Y = screen address (TBA[row] + col).
-; After JSL, the compiled routine handles RAMRD/RAMWRT internally.
 
 :gameloop
-            ; Draw Harrier at row 100, col 60
-            lda    #100
-            asl
-            tax
-            lda    TBA,x
-            clc
-            adc    #60
-            tay
-            jsl    TABLE_ROUT+4       ; Man frame 0 (entry 1)
+            jsr    WaitVBL
+            jsr    ClearScreen
 
-            ; Large tree (frame 0) at row 20, col 5
-            lda    #20
-            asl
-            tax
-            lda    TBA,x
-            clc
-            adc    #5
-            tay
-            jsl    TABLE_ROUT+$60     ; Tree frame 0 (entry 24) — largest
-
-            ; Medium tree (frame 8) at row 60, col 40
-            lda    #60
-            asl
-            tax
-            lda    TBA,x
-            clc
-            adc    #40
-            tay
-            jsl    TABLE_ROUT+$80     ; Tree frame 8 (entry 32)
-
-            ; Small tree (frame 15) at row 80, col 10
-            lda    #80
-            asl
-            tax
-            lda    TBA,x
-            clc
-            adc    #10
-            tay
-            jsl    TABLE_ROUT+$9C     ; Tree frame 15 (entry 39) — smallest
-
-            ; Buisson/bush (frame 0) at row 30, col 100
-            lda    #30
-            asl
-            tax
-            lda    TBA,x
-            clc
-            adc    #100
-            tay
-            jsl    TABLE_ROUT+$138    ; Buisson frame 0 (entry 78) — largest
-
-            ; Pierre/rock (frame 0) at row 50, col 70
-            lda    #50
-            asl
-            tax
-            lda    TBA,x
-            clc
-            adc    #70
-            tay
-            jsl    TABLE_ROUT+$F8     ; Pierre frame 0 (entry 62) — largest
-
-            ; Ship (frame 0) at row 10, col 110
-            lda    #10
-            asl
-            tax
-            lda    TBA,x
-            clc
-            adc    #110
-            tay
-            jsl    TABLE_ROUT+$170    ; Ship frame 0 (entry 92) — largest
-
-            ; Explosion (frame 5) at row 40, col 130
-            lda    #40
-            asl
-            tax
-            lda    TBA,x
-            clc
-            adc    #130
-            tay
-            jsl    TABLE_ROUT+$B4     ; Explo frame 5 (entry 45)
-
-            ; Trident (frame 0) at row 15, col 55
-            lda    #15
-            asl
-            tax
-            lda    TBA,x
-            clc
-            adc    #55
-            tay
-            jsl    TABLE_ROUT+$1AC    ; Trident frame 0 (entry 107) — largest
-
-            ; Poll keyboard
+            ; Advance ground scroll (forward motion)
             sep    #$20
-            mx     %10
-            ldal   KBD_DATA
-            bpl    :nokey
-            and    #$7F
-            stal   KBD_STROBE
-            cmp    #$1B
-            beq    :quit
-:nokey
+            lda    Coordonnee_Y
+            dec
+            bpl    :yok
+            lda    #29                ; wrap 0→29 (range 0-29)
+:yok        sta    Coordonnee_Y
             rep    #$20
-            mx     %00
-            jmp    :gameloop
 
-:quit       rep    #$20
-            mx     %00
+            ; Set up perspective-correct SCBs for checkerboard
+            jsr    SetupDamierSCB
+
+            ; Y = screen address of horizon row
+            lda    Ligne_Damier
+            asl
+            tax
+            lda    TBA,x
+            tay
+
+            ; X = IMAGE frame offset (scroll position)
+            lda    Coordonnee_X
+            and    #$0007
+            asl
+            tax
+            lda    Table_Damier,x
+            tax
+
+            ; Set DBR to IMAGE bank (must be AFTER reads from code bank)
+            sep    #$20
+            lda    #^IMAGE
+            pha
+            plb
+            rep    #$20
+
+            jsl    Damier_Rout
+
+            ; Restore DBR to code bank
+            phk
+            plb
+
+            ; Draw Harrier at current position
+            lda    HarrierRow
+            asl
+            tax
+            lda    TBA,x
+            clc
+            adc    HarrierCol
+            tay
+
+            ; Self-modifying JSL — patched with correct frame address
+            jsl    TABLE_ROUT+4       ; operand patched below
+_DrawMan    equ    *-3                ; points to the 3-byte JSL operand
+
+            ; Animate: cycle Man frames 0-7 (running)
+            lda    FrameTimer
+            inc
+            sta    FrameTimer
+            and    #$0007             ; new frame every 8 VBLs
+            bne    :noAnim
+            lda    Shape_Man
+            inc
+            cmp    #8
+            bcc    :setFrame
+            lda    #0
+:setFrame   sta    Shape_Man
+:noAnim
+
+            ; Update JSL target: TABLE_ROUT + (Shape_Man+1)*4
+            lda    Shape_Man
+            inc                       ; +1 because entry 0 is unused
+            asl
+            asl                       ; *4
+            clc
+            adc    #TABLE_ROUT
+            sta    _DrawMan
+            sep    #$20
+            lda    #^TABLE_ROUT
+            sta    _DrawMan+2
+            rep    #$20
+
+            ; Poll keyboard — movement + ESC
+            jsr    HandleInput
+
+            lda    QuitFlag
+            bne    :quit
+            jmp    :gameloop
+:quit
 
 DoQuit      jsr    SHR_Off
             _MTShutDown
             _QuitGS qtRec
             brk    $00
+
+; =====================================================================
+; WaitVBL — wait for vertical blanking period
+; =====================================================================
+WaitVBL
+            sep    #$20
+:notVBL     ldal   $E0C019
+            bmi    :notVBL           ; wait while bit 7=1 (display active)
+            rep    #$20
+            rts
+
+; =====================================================================
+; ClearScreen — clear full SHR screen via STAL
+; Temporary — will be replaced by FTA's compiled Clear_Rout
+; =====================================================================
+ClearScreen
+            ; Only clear sky area (rows 0 to horizon)
+            ; Ligne_Damier * $A0 = bytes to clear
+            lda    #0
+            ldx    #0
+:clr        stal   SHR_SCREEN,x
+            inx
+            inx
+            cpx    #$89*$A0           ; horizon row 137 × 160 bytes
+            bcc    :clr
+            rts
+
+; =====================================================================
+; SetupDamierSCB — perspective-correct palette banding for checkerboard
+; Ported from FTA's SPACE.S: thick bands at bottom, thin at horizon
+; Uses palettes 0 and 1 alternating. Coordonnee_Y = vertical scroll.
+; =====================================================================
+SetupDamierSCB
+            sep    #$30               ; 8-bit A and X/Y
+            lda    Coordonnee_Y
+            cmp    #15
+            bcs    :range2
+
+            ; Range 1: Coordonnee_Y < 15
+            ldx    #0                 ; start palette = 0
+            lda    Ligne_Damier
+            clc
+            adc    #$3C              ; + 60 = bottom of ground
+            sec
+            sbc    Coordonnee_Y
+            bra    :updown
+
+:range2     ldx    #1                 ; start palette = 1
+            lda    Ligne_Damier
+            clc
+            adc    #$3C+15
+            sec
+            sbc    Coordonnee_Y
+
+:updown     sta    _PNT1
+            stx    _PNT2
+            cmp    #$C5
+            bcs    :cycle2
+
+            ; Fill from PNT1 to $C4 with current palette
+            lda    _PNT2
+            ldx    _PNT1
+:fill1      stal   SHR_SCB,x
+            inx
+            cpx    #$C5
+            bcc    :fill1
+
+:cycle2     lda    _PNT2
+            eor    #1
+            sta    _PNT2
+
+            ; Compute band width: (distance_from_horizon/2 + 1) / 2
+            lda    _PNT1
+            sec
+            sbc    Ligne_Damier
+            lsr
+            inc
+            lsr
+            cmp    #2
+            bcc    :final
+
+            ; new_start = PNT1 - band_width
+            sec
+            sbc    _PNT1
+            eor    #$FF
+            inc
+            tay                       ; Y = new start row
+            tax                       ; X = new start row
+            lda    _PNT2
+:fill2      stal   SHR_SCB,x
+            inx
+            cpx    #$C5
+            bcs    :finpal
+            cpx    _PNT1
+            bcc    :fill2
+:finpal     sty    _PNT1
+            bra    :cycle2
+
+            ; Near horizon: single-scanline alternation
+:final      ldx    _PNT1
+:finloop    dex
+            cpx    Ligne_Damier
+            bcc    :done
+            lda    _PNT2
+            stal   SHR_SCB,x
+            and    #%1
+            eor    #1
+            sta    _PNT2
+            bra    :finloop
+
+:done       rep    #$30
+            rts
+
+_PNT1       ds     1
+_PNT2       ds     1
+Coordonnee_Y da    0
+
+; =====================================================================
+; HandleInput — read keyboard, move Harrier, set QuitFlag
+; =====================================================================
+; Apple IIgs keyboard: only one key at a time via $C000/$C010.
+; Arrow keys: left=$08, right=$15, up=$0B, down=$0A
+; =====================================================================
+HandleInput
+            stz    QuitFlag
+            sep    #$20
+            mx     %10
+            ldal   KBD_DATA
+            bpl    :done             ; no key pressed
+            and    #$7F
+            stal   KBD_STROBE        ; acknowledge keypress
+
+            cmp    #$1B              ; ESC
+            bne    :notEsc
+            rep    #$20
+            mx     %00
+            lda    #1
+            sta    QuitFlag
+            rts
+:notEsc
+            rep    #$20
+            mx     %00
+            and    #$00FF
+
+            cmp    #$08              ; left arrow
+            bne    :notLeft
+            lda    HarrierCol
+            sec
+            sbc    #2
+            bmi    :done2
+            sta    HarrierCol
+            bra    :done2
+:notLeft
+            cmp    #$15              ; right arrow
+            bne    :notRight
+            lda    HarrierCol
+            clc
+            adc    #2
+            cmp    #144              ; 160 - ~16 pixels for sprite width
+            bcs    :done2
+            sta    HarrierCol
+            bra    :done2
+:notRight
+            cmp    #$0B              ; up arrow
+            bne    :notUp
+            lda    HarrierRow
+            sec
+            sbc    #2
+            bmi    :done2
+            sta    HarrierRow
+            bra    :done2
+:notUp
+            cmp    #$0A              ; down arrow
+            bne    :done2
+            lda    HarrierRow
+            clc
+            adc    #2
+            cmp    #184              ; don't go off bottom
+            bcs    :done2
+            sta    HarrierRow
+:done2      rts
+:done
+            rep    #$20
+            mx     %00
+            rts
 
 ; =====================================================================
 ; SetupLoadPalette — minimal palette for load indicator bar
@@ -263,7 +466,7 @@ SetupPalettes
             stal   SHR_PALETTES+$04
             lda    #$0449           ; 3: blue
             stal   SHR_PALETTES+$06
-            lda    #$00F6           ; 4: bright green
+            lda    #$0CF8           ; 4: light cream/green (checker light)
             stal   SHR_PALETTES+$08
             lda    #$0092           ; 5: green
             stal   SHR_PALETTES+$0A
@@ -283,14 +486,14 @@ SetupPalettes
             stal   SHR_PALETTES+$18
             lda    #$0062           ; D: dark green
             stal   SHR_PALETTES+$1A
-            lda    #$0094           ; E: green (transparent in sprites)
+            lda    #$0072           ; E: dark green (checker dark)
             stal   SHR_PALETTES+$1C
             lda    #$0FFF           ; F: white
             stal   SHR_PALETTES+$1E
 
             ; Copy palette 0 to all other palettes (1-15)
             ldx    #0
-:cppal      lda    SHR_PALETTES+$00,x
+:cppal      ldal   SHR_PALETTES+$00,x
             stal   SHR_PALETTES+$20,x
             stal   SHR_PALETTES+$40,x
             stal   SHR_PALETTES+$60,x
@@ -311,14 +514,12 @@ SetupPalettes
             cpx    #$20
             bne    :cppal
 
-            ; Fill screen with sky color (color 0)
-            lda    #0
-            ldx    #0
-:sky        stal   SHR_SCREEN,x
-            inx
-            inx
-            cpx    #$7D00
-            bcc    :sky
+            ; Palette 1: swap colors $4 and $E for checkerboard alternation
+            lda    #$0CF8             ; color $4 value → palette 1 color $E
+            stal   SHR_PALETTES+$3C   ; palette 1 ($20) + color $E ($1C)
+            lda    #$0072             ; color $E value → palette 1 color $4
+            stal   SHR_PALETTES+$28   ; palette 1 ($20) + color $4 ($08)
+
             rts
 
 ; =====================================================================
@@ -343,6 +544,38 @@ CompileSprites
             sep    #$20
             pla
             sta    _FrmTblPtr+2
+            rep    #$20
+
+            ; =========================================
+            ; Damier — checkerboard blit routine
+            ; =========================================
+            ; Border $02 = before Damier compile
+            sep    #$20
+            lda    #$02
+            stal   $E0C034
+            rep    #$20
+
+            ldx    #0
+:cpdam      lda    Damier_Tbl,x
+            sta    $00,x
+            inx
+            inx
+            cpx    #$18
+            bne    :cpdam
+
+            ; Border $03 = about to call Create_Sprite for Damier
+            sep    #$20
+            lda    #$03
+            stal   $E0C034
+            rep    #$20
+
+            lda    MyDirectPage
+            jsr    Create_Sprite
+
+            ; Border $0C = after Damier compile
+            sep    #$20
+            lda    #$0C
+            stal   $E0C034
             rep    #$20
 
             ; =========================================
@@ -711,6 +944,7 @@ SHR_Off
 ; FTA Compiled Sprite Engine (ported from CREATE.SPRITE.S)
 ; =====================================================================
             PUT    Create.Sprite
+            PUT    Checkerboard
 
 ; =====================================================================
 ; GS/OS inline parameter records
@@ -743,6 +977,31 @@ _rdXferCtHi da     0
 ; Man_Tbl — Harrier sprite table for Create_Sprite
 ;
 ; 19 animation frames, all 48×16 (48 rows, 16 bytes = 32 pixels wide).
+; =====================================================================
+; Damier_Tbl — checkerboard blit routine (compiled as "decor" sprite)
+; Uses $FEFE00 mask mode: emits LDA abs,X to read from IMAGE buffer
+; =====================================================================
+Damier_Tbl  adrl   Damier_Rout        ; $00: output addr
+            adrl   $0                 ; $04: shape data (not used for decor)
+            adrl   $FEFE00            ; $08: Restore_Dec mode
+            da     0                  ; $0C: TblNb (entry 0, not in TABLE_ROUT)
+            da     $3C               ; $0E: NbLgn = 60 rows
+            da     $80               ; $10: NbCol = 128 bytes (full width)
+            da     $FFFF             ; $12: Lgn = dynamic
+            da     $FFFF             ; $14: Col = dynamic
+            da     $00               ; $16: Pixel_Shape = 0
+
+; Table_Damier — offsets for 8 horizontal scroll positions
+; Each frame in IMAGE is $1E00 bytes apart
+Table_Damier
+]_A         =      0
+            lup    8
+            da     _LONGUEUR*]_A
+]_A         =      ]_A+1
+            --^
+
+; =====================================================================
+; Man_Tbl — Harrier sprite parameter table
 ; Compiled into TABLE_ROUT entries 1-19.
 ; Each frame has a 4-byte header in SHAPE.RUN that gets skipped.
 ; =====================================================================
@@ -1028,6 +1287,15 @@ _bbase      ds    2
 
 ; --- AssetPtrs: 24-bit address of each loaded asset (4 bytes/slot) ---
 AssetPtrs   ds    4*18
+
+; --- Game state ---
+HarrierRow  ds    2
+HarrierCol  ds    2
+Shape_Man   ds    2
+FrameTimer  ds    2
+QuitFlag    ds    2
+Ligne_Damier da   $C5-$3C           ; horizon line (same as FTA)
+Coordonnee_X da   0                 ; horizontal scroll position
 
 ; =====================================================================
 ; Quit record / app state
