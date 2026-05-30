@@ -235,6 +235,35 @@ Taille          equ  16
             phk
             plb
 
+            ; Draw mountains — 14 rows above horizon, parallax at half speed
+            ; Y = SHR address of (Ligne_Damier - 14)
+            lda    Ligne_Damier
+            sec
+            sbc    #14
+            asl
+            tax
+            lda    TBA,x
+            tay
+            ; X = Mountain_Pos/2, frame select on odd/even
+            lda    Coordonnee_X
+            lsr                       ; Mountain_Pos = Coordonnee_X / 2
+            and    #$00FF
+            lsr                       ; /2 → byte offset 0-127
+            bcc    :mtnEven
+            clc
+            adc    #$0E00            ; odd: use second frame
+:mtnEven    tax
+            ; Set DBR to MOUNT data bank
+            sep    #$20
+            lda    #^Decor_Mountain
+            pha
+            plb
+            rep    #$20
+            jsl    Mountain_Rout
+            ; Restore DBR
+            phk
+            plb
+
             ; Draw Harrier at current position
             lda    HarrierRow
             asl
@@ -444,7 +473,7 @@ SetupDamierSCB
             adc    #$3C              ; + 60 = bottom of ground
             sec
             sbc    Coordonnee_Y
-            bra    :updown
+            bra    :flipchk
 
 :range2     ldx    #1                 ; start palette = 1
             lda    Ligne_Damier
@@ -452,6 +481,16 @@ SetupDamierSCB
             adc    #$3C+15
             sec
             sbc    Coordonnee_Y
+
+            ; Flip palette assignment every 8 scroll steps (FTA's Select_X)
+:flipchk    pha
+            lda    Coordonnee_X
+            and    #$08
+            beq    :noFlip
+            txa
+            eor    #1
+            tax
+:noFlip     pla
 
 :updown     sta    _PNT1
             stx    _PNT2
@@ -853,6 +892,20 @@ CompileSprites
             rep    #$20
 
             ; =========================================
+            ; Mountain — 14 rows × 128 bytes, FDFD mode
+            ; =========================================
+            ldx    #0
+:cpmtn      lda    Mountain_Tbl,x
+            sta    $00,x
+            inx
+            inx
+            cpx    #$18
+            bne    :cpmtn
+
+            lda    MyDirectPage
+            jsr    Create_Sprite
+
+            ; =========================================
             ; Man — 19 frames, all 48 rows × 16 bytes
             ; =========================================
             ldx    #0
@@ -1248,13 +1301,11 @@ _rdXferCount da    0
 _rdXferCtHi da     0
 
 ; =====================================================================
-; Man_Tbl — Harrier sprite table for Create_Sprite
-;
-; 19 animation frames, all 48×16 (48 rows, 16 bytes = 32 pixels wide).
+; Compiled sprite parameter tables
 ; =====================================================================
+
 ; Damier_Tbl — checkerboard blit routine (compiled as "decor" sprite)
 ; Uses $FEFE00 mask mode: emits LDA abs,X to read from IMAGE buffer
-; =====================================================================
 Damier_Tbl  adrl   Damier_Rout        ; $00: output addr
             adrl   $0                 ; $04: shape data (not used for decor)
             adrl   $FEFE00            ; $08: Restore_Dec mode
@@ -1273,6 +1324,19 @@ Table_Damier
             da     _LONGUEUR*]_A
 ]_A         =      ]_A+1
             --^
+
+; Mountain_Tbl — mountain blit routine (compiled as decor, $FDFD mode)
+; MOUNT data: 14 rows × 256-byte stride, 2 frames for pixel scroll
+Mountain_Tbl
+            adrl   Mountain_Rout      ; $00: output addr
+            adrl   $0                 ; $04: shape data (not used for decor)
+            adrl   $FDFD00            ; $08: Mountain special mode
+            da     0                  ; $0C: TblNb = 0 (not in TABLE_ROUT)
+            da     $0E               ; $0E: NbLgn = 14 rows
+            da     $80               ; $10: NbCol = 128 bytes (full width)
+            da     $FFFF             ; $12: Lgn = dynamic
+            da     $FFFF             ; $14: Col = dynamic
+            da     $00               ; $16: Pixel_Shape = 0
 
 ; =====================================================================
 ; Man_Tbl — Harrier sprite parameter table
