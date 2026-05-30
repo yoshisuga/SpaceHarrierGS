@@ -172,6 +172,25 @@ Taille          equ  16
             ; Update horizon from Harrier's vertical position
             jsr    UpdateHorizon
 
+            ; Lateral ground scroll based on Harrier's X position
+            ; FTA: Table_Vitesse[COL] gives speed -3..+3
+            ; COL maps to HarrierCol/2 (our range 0-143 → index 0-71)
+            lda    HarrierCol
+            lsr                       ; /2 to match FTA's COL range
+            tax
+            sep    #$20
+            lda    Table_Vitesse,x
+            sta    V_X
+            stz    V_X+1
+            bpl    :vxPos
+            lda    #$FF
+            sta    V_X+1             ; sign-extend negative velocity
+:vxPos      rep    #$20
+            lda    Coordonnee_X
+            clc
+            adc    V_X
+            sta    Coordonnee_X
+
             ; Advance ground scroll (forward motion)
             sep    #$20
             lda    Coordonnee_Y
@@ -1551,6 +1570,19 @@ FrameTimer  ds    2
 QuitFlag    ds    2
 Ligne_Damier da   $C5-$3C           ; horizon line (same as FTA)
 Coordonnee_X da   0                 ; horizontal scroll position
+V_X          ds   2                  ; lateral scroll velocity (signed)
+
+; Table_Vitesse — lateral scroll speed from Harrier X position
+; FTA: 113 entries, speed -3 to +3. Center = no scroll.
+; Our HarrierCol/2 gives index 0-71, so we need ~72 entries.
+Table_Vitesse
+            ds    10,$FD              ; far left: speed -3
+            ds    10,$FE              ; speed -2
+            ds    10,$FF              ; speed -1
+            ds    12,$00              ; center: no scroll
+            ds    10,$01              ; speed +1
+            ds    10,$02              ; speed +2
+            ds    10,$03              ; far right: speed +3
 
 ; Table_Ciel — sky gradient palette assignments per row
 ; Read from horizon downward (row 137→27). Each byte = palette number.
