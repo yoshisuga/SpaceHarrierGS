@@ -120,6 +120,7 @@ Taille          equ  16
             stz    Shape_Man
             stz    FrameTimer
             stz    QuitFlag
+            jsr    InitObjects
 
             ; One-time clear of SHR screen so sky pixels are color 0
             jsr    ClearScreen
@@ -162,6 +163,12 @@ Taille          equ  16
 ; =====================================================================
 
 :gameloop
+            ; DIAG: border red = start of frame
+            sep    #$20
+            lda    #$01
+            stal   $E0C034
+            rep    #$20
+
             jsr    WaitVBL
 
             ; Poll keyboard — movement + ESC
@@ -171,6 +178,15 @@ Taille          equ  16
 
             ; Update horizon from Harrier's vertical position
             jsr    UpdateHorizon
+
+            ; DIAG: border green = before Shape_Action
+            sep    #$20
+            lda    #$0C
+            stal   $E0C034
+            rep    #$20
+
+            ; Move objects closer, spawn new ones
+            jsr    Shape_Action
 
             ; Lateral ground scroll based on Harrier's X position
             ; FTA: Table_Vitesse[COL] gives speed -3..+3
@@ -264,6 +280,21 @@ Taille          equ  16
             phk
             plb
 
+            ; DIAG: border blue = before Print_Shape
+            sep    #$20
+            lda    #$03
+            stal   $E0C034
+            rep    #$20
+
+            ; Draw world objects (trees etc.) depth-sorted
+            jsr    Print_Shape
+
+            ; DIAG: border white = before Harrier draw
+            sep    #$20
+            lda    #$0F
+            stal   $E0C034
+            rep    #$20
+
             ; Draw Harrier at current position
             lda    HarrierRow
             asl
@@ -302,6 +333,12 @@ _DrawMan    equ    *-3                ; points to the 3-byte JSL operand
             sep    #$20
             lda    #^TABLE_ROUT
             sta    _DrawMan+2
+            rep    #$20
+
+            ; DIAG: border yellow = end of frame (loop back)
+            sep    #$20
+            lda    #$0E
+            stal   $E0C034
             rep    #$20
 
             jmp    :gameloop
@@ -623,6 +660,245 @@ HandleInput
             rep    #$20
             mx     %00
             rts
+
+; =====================================================================
+; Object System Constants
+; =====================================================================
+OBJ_SIZE     equ  8          ; bytes per object slot
+MAX_OBJECTS  equ  16         ; max simultaneous objects
+; Object field offsets within each slot
+S_Coor_Hori  equ  0          ; horizontal world coordinate (16-bit)
+S_Profondeur equ  2          ; depth 0-15, $FFFF=inactive
+S_Nature     equ  4          ; 0=tree, 1=pierre, 2=buisson
+S_Altitude   equ  6          ; vertical altitude (0=ground)
+
+; =====================================================================
+; InitObjects — mark all object slots inactive
+; =====================================================================
+InitObjects
+            ldx    #0
+            lda    #$FFFF
+:loop       sta    ObjArray+S_Profondeur,x
+            txa
+            clc
+            adc    #OBJ_SIZE
+            tax
+            cpx    #MAX_OBJECTS*OBJ_SIZE
+            bcc    :loop
+            rts
+
+; =====================================================================
+; Shape_Action — move objects closer each frame, spawn new ones
+; =====================================================================
+Shape_Action
+            rep    #$30
+            ldx    #0
+:saLoop     lda    ObjArray+S_Profondeur,x
+            bmi    :trySpawn       ; $FFFF = inactive → try spawn
+            ; Active: decrease depth (approach player)
+            dec
+            bpl    :saStore
+            lda    #$FFFF          ; passed player → deactivate
+:saStore    sta    ObjArray+S_Profondeur,x
+            bra    :saNext
+
+:trySpawn   jsr    ALEA
+            and    #$FF
+            cmp    #$FC            ; ~1.5% chance to spawn per slot
+            bcc    :saNext
+            ; Spawn a tree at the horizon
+            lda    #15
+            sta    ObjArray+S_Profondeur,x
+            lda    #0              ; nature = tree
+            sta    ObjArray+S_Nature,x
+            stz    ObjArray+S_Altitude,x ; on the ground
+            ; Random horizontal position: ±128 around view center
+            jsr    ALEA
+            and    #$FF            ; 0-255
+            sec
+            sbc    #$80            ; -128 to +127 (16-bit: $FF80-$007F)
+            clc
+            adc    Coordonnee_X
+            sta    ObjArray+S_Coor_Hori,x
+
+:saNext     txa
+            clc
+            adc    #OBJ_SIZE
+            tax
+            cpx    #MAX_OBJECTS*OBJ_SIZE
+            bcc    :saLoop
+            rts
+
+; =====================================================================
+; Print_Shape — depth-sorted render (back to front: 15→0)
+; Only draws trees (nature=0) for now.
+; =====================================================================
+Print_Shape
+            rep    #$30
+            lda    #15
+            sta    _Profondeur
+
+:psDepth    ldx    #0
+:psObj      lda    ObjArray+S_Profondeur,x
+            cmp    _Profondeur
+            BNEL   :psNextO
+            ; This object is at the current depth — render it
+            stx    _Exploreur
+
+            ; Only trees for now
+            lda    ObjArray+S_Nature,x
+            bne    :psSkip         ; skip non-trees
+
+            ; Shape number = depth + 24 (tree TABLE_ROUT entries)
+            lda    ObjArray+S_Profondeur,x
+            clc
+            adc    #24
+            sta    _Nbr_Shape
+
+            ; === Horizontal projection ===
+            ; screen_col = |delta| * Decalage_Y[depth] / 16, signed, + $40
+            lda    ObjArray+S_Coor_Hori,x
+            sec
+            sbc    Coordonnee_X    ; signed delta
+            sta    _horiDelta
+            Inverse                ; make positive
+            cmp    #$FF
+            bcc    :psOkV
+            lda    #$FF            ; clamp to 255
+:psOkV      sep    #$30
+            pha                    ; save 8-bit distance
+            ldx    _Profondeur
+            lda    Decalage_Y,x    ; perspective factor for this depth
+            tay
+            pla
+            jsr    MULTI           ; A(8) × Y(8) → A(16)
+            mx     %00            ; tell assembler: MULTI returns in 16-bit mode
+            lsr
+            lsr
+            lsr
+            lsr                    ; /16
+            ldx    _horiDelta      ; test sign of original delta
+            bpl    :psPos
+            eor    #$FFFF
+            inc                    ; negate
+:psPos      clc
+            adc    #$40            ; center on screen
+            ; Bounds check: column must be 0-$6F (leaves room for sprite width)
+            cmp    #$70
+            bcs    :psSkip
+            sta    _Colonne_Shape
+
+            ; === Vertical projection ===
+            ; row = Ligne_Damier + Decalage_Y[depth] - Shape_Hauteur[shape]
+            sep    #$30            ; 8-bit A,X,Y
+            ldx    _Profondeur
+            lda    Decalage_Y,x    ; rows below horizon for this depth
+            clc
+            adc    Ligne_Damier    ; absolute screen row (bottom of shape)
+            ldx    _Nbr_Shape
+            sec
+            sbc    Shape_Hauteur,x ; subtract sprite height → top row
+            ; Row bounds check
+            cmp    #200
+            bcs    :psSkip8        ; skip if row >= 200 (unsigned wraps too)
+            rep    #$30
+            and    #$00FF
+            tax                    ; X = screen row
+
+            lda    _Nbr_Shape      ; A = shape number
+            ldy    _Colonne_Shape  ; Y = column (byte offset)
+            jsr    Draw_Shape
+            bra    :psSkip
+:psSkip8    rep    #$30
+
+:psSkip     ldx    _Exploreur
+:psNextO    txa
+            clc
+            adc    #OBJ_SIZE
+            tax
+            cpx    #MAX_OBJECTS*OBJ_SIZE
+            BCCL   :psObj
+            dec    _Profondeur
+            lda    _Profondeur
+            BPLL   :psDepth
+            rts
+
+; =====================================================================
+; Draw_Shape — dispatch compiled sprite via TABLE_ROUT
+;   A = shape number (TABLE_ROUT entry)
+;   X = screen row
+;   Y = column (byte offset in row)
+; =====================================================================
+Draw_Shape
+            asl
+            asl                    ; ×4
+            clc
+            adc    #TABLE_ROUT     ; low 16 bits of entry address
+            stal   _dsJSL+1
+            sep    #$20
+            lda    #^TABLE_ROUT
+            stal   _dsJSL+3        ; bank byte
+            rep    #$20
+
+            txa
+            asl
+            tax
+            tya                    ; column byte offset
+            clc
+            adc    TBA,x           ; + row SHR address
+            tay                    ; Y = SHR destination
+
+_dsJSL      jsl    TABLE_ROUT      ; operand patched above
+            rts
+
+; =====================================================================
+; MULTI — 8-bit × 8-bit → 16-bit multiply via lookup tables
+; Input:  A = factor 1 (8-bit), Y = factor 2 (8-bit)
+; Output: A = 16-bit product (returns in REP #$30 mode)
+; Ported from FTA's SPACE.S
+; =====================================================================
+; Simple loop multiply: A(8) × Y(8) → A(16)
+; Y is the scale factor (1-40 max), used as loop count
+MULTI       rep    #$30
+            and    #$00FF         ; A = distance (0-255), zero-extend
+            sta    _PROD          ; save as addend
+            tya
+            and    #$00FF         ; A = scale (1-40), zero-extend
+            beq    :mulZero
+            tax                   ; X = loop count
+            lda    #0
+:mulLoop    clc
+            adc    _PROD
+            dex
+            bne    :mulLoop
+            rts
+:mulZero    lda    #0
+            rts
+
+; =====================================================================
+; ALEA — 16-bit LFSR pseudo-random number generator
+; Returns random value in A (16-bit). Mixes in VBL counter for entropy.
+; =====================================================================
+ALEA        lda    RandSeed
+            lsr
+            bcc    :noTap
+            eor    #$D008         ; primitive polynomial: x^16+x^15+x^13+x^4+1
+:noTap      sta    RandSeed
+            rts
+
+RandSeed    da     $3ACE          ; initial seed (non-zero)
+
+; MULTI temp variables
+_NB1        ds     1
+_NB2        ds     1
+_PROD       ds     2
+
+; Object system variables
+_Profondeur ds     2
+_Exploreur  ds     2
+_Nbr_Shape  ds     2
+_horiDelta  ds     2
+_Colonne_Shape ds  2
 
 ; =====================================================================
 ; SetupLoadPalette — minimal palette for load indicator bar
@@ -1668,6 +1944,159 @@ Table_Ciel
             --^
             ds    6,5
             ds    3,4                ; near top: back to dark
+
+; =====================================================================
+; Object array — MAX_OBJECTS slots × OBJ_SIZE bytes
+; =====================================================================
+ObjArray    ds     MAX_OBJECTS*OBJ_SIZE
+
+; =====================================================================
+; Decalage_Y — perspective scaling per depth level (FTA's SPACE.S)
+; Index by depth (0=near, 15=far). Value = rows below horizon.
+; =====================================================================
+Decalage_Y  dfb    40,32,26,22,18,15,13,11,9,7,6,5,4,3,2,1
+
+; =====================================================================
+; Shape_Hauteur — sprite height (rows) indexed by TABLE_ROUT entry
+; Entries 0-23 unused (damier/man), padded with zeros.
+; =====================================================================
+Shape_Hauteur
+            ds     24,0           ; padding for entries 0-23
+
+            ; Tree (entries 24-39, depths 0-15)
+            dfb    $79,$50,$3C,$30,$28,$21,$1D,$19
+            dfb    $17,$14,$13,$11,$11,$10,$0F,$0E
+
+            ; Explosion (entries 40-50)
+            dfb    36,29,23,19,18,15,14,12,10,9,8
+
+            ; Tir (entries 51-61)
+            dfb    14,14,10,8,7,6,5,4,4,4,3
+
+            ; Pierre (entries 62-69)
+            dfb    29,20,14,11,10,9,7,6
+
+            ; Ombre (entries 70-77)
+            dfb    12,9,6,5,4,3,2,1
+
+            ; Buisson (entries 78-91)
+            dfb    29,18,14,11,9,8,7,6,5,5,4,4,4,2
+
+            ; Ship (entries 92-106)
+            dfb    35,22,16,13,10,9,7,6,6,5,4,4,4,3,3
+
+            ; Trident (entries 107-115)
+            dfb    48,42,34,23,18,15,12,11,7
+
+; =====================================================================
+; MULTI lookup tables (FTA's SPACE.S)
+; =====================================================================
+
+; HAUTBAS — high nibble of Y replicated across all positions
+HAUTBAS     hex    00000000000000000000000000000000
+            hex    01010101010101010101010101010101
+            hex    02020202020202020202020202020202
+            hex    03030303030303030303030303030303
+            hex    04040404040404040404040404040404
+            hex    05050505050505050505050505050505
+            hex    06060606060606060606060606060606
+            hex    07070707070707070707070707070707
+            hex    08080808080808080808080808080808
+            hex    09090909090909090909090909090909
+            hex    0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A
+            hex    0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B
+            hex    0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C
+            hex    0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D
+            hex    0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E
+            hex    0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F
+
+; BASHAUT — low nibble of Y shifted to high nibble
+BASHAUT     hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+            hex    00102030405060708090A0B0C0D0E0F0
+
+; BASBAS — low nibble identity
+BASBAS      hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    000102030405060708090A0B0C0D0E0F
+
+; MULTIT1 — 4-bit × 4-bit product table (256 bytes)
+MULTIT1     hex    00000000000000000000000000000000
+            hex    000102030405060708090A0B0C0D0E0F
+            hex    00020406080A0C0E10121416181A1C1E
+            hex    000306090C0F1215181B1E2124272A2D
+            hex    0004080C1014181C2024282C3034383C
+            hex    00050A0F14191E23282D32373C41464B
+            hex    00060C12181E242A30363C42484E545A
+            hex    00070E151C232A31383F464D545B6269
+            hex    00081018202830384048505860687078
+            hex    0009121B242D363F48515A636C757E87
+            hex    000A141E28323C46505A646E78828C96
+            hex    000B16212C37424D58636E79848F9AA5
+            hex    000C1824303C4854606C7884909CA8B4
+            hex    000D1A2734414E5B6875828F9CA9B6C3
+            hex    000E1C2A38465462707E8C9AA8B6C4D2
+            hex    000F1E2D3C4B5A69788796A5B4C3D2E1
+
+; MULTIT2 — crossed-nibble correction table (512 bytes)
+MULTIT2     hex    00000000000000000000000000000000
+            hex    00000000000000000000000000000000
+            hex    00001000200030004000500060007000
+            hex    80009000A000B000C000D000E000F000
+            hex    00002000400060008000A000C000E000
+            hex    00012001400160018001A001C001E001
+            hex    0000300060009000C000F00020015001
+            hex    8001B001E001100240027002A002D002
+            hex    000040008000C000000140018001C001
+            hex    000240028002C002000340038003C003
+            hex    00005000A000F00040019001E0013002
+            hex    8002D00220037003C00310046004B004
+            hex    00006000C00020018001E0014002A002
+            hex    00036003C00320048004E0044005A005
+            hex    00007000E0005001C0013002A0021003
+            hex    8003F0036004D0044005B00520069006
+            hex    00008000000180010002800200038003
+            hex    00048004000580050006800600078007
+            hex    000090002001B0014002D0026003F003
+            hex    80041005A0053006C0065007E0077008
+            hex    0000A0004001E00180022003C0036004
+            hex    0005A0054006E00680072008C0086009
+            hex    0000B00060011002C00270032004D004
+            hex    80053006E00690074008F008A009500A
+            hex    0000C000800140020003C00380044005
+            hex    0006C006800740080009C009800A400B
+            hex    0000D000A001700240031004E004B005
+            hex    800650072008F008C009900A600B300C
+            hex    0000E000C001A0028003600440052006
+            hex    0007E007C008A009800A600B400C200D
+            hex    0000F000E001D002C003B004A0059006
+            hex    800770086009500A400B300C200D100E
 
 ; =====================================================================
 ; Quit record / app state
