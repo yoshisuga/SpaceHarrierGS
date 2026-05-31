@@ -81,9 +81,9 @@
    78 |  1      App.Main.s     78 | Comment     | 00 |         |    0 | 00/0000               | ; =====================================================================
    79 |  1      App.Main.s     79 | Code        | 00 |         |    1 | 00/0000 : 4B          |                   phk                       
    80 |  1      App.Main.s     80 | Code        | 00 |         |    1 | 00/0001 : AB          |                   plb                       
-   81 |  1      App.Main.s     81 | Code        | 00 |  2      |    3 | 00/0002 : 8D 37 20    |                   sta        MyUserId       
+   81 |  1      App.Main.s     81 | Code        | 00 |  2      |    3 | 00/0002 : 8D 31 20    |                   sta        MyUserId       
    82 |  1      App.Main.s     82 | Code        | 00 |         |    1 | 00/0005 : 7B          |                   tdc                       
-   83 |  1      App.Main.s     83 | Code        | 00 |  2      |    3 | 00/0006 : 8D 35 20    |                   sta        MyDirectPage   
+   83 |  1      App.Main.s     83 | Code        | 00 |  2      |    3 | 00/0006 : 8D 2F 20    |                   sta        MyDirectPage   
    84 |  1      App.Main.s     84 | Empty       | 00 |         |    0 | 00/0009               |                                             
    85 |  1      App.Main.s     85 | Macro       | 00 |         |    0 | 00/0009               |                   _MTStartUp                 
    87 |  1      App.Main.s     85 | Code        | 00 |         |    3 | 00/0009 : A2 03 02    |                   LDX        #$203          ; load tool call #
@@ -352,7 +352,7 @@
   351 |  1      App.Main.s    341 | Macro       | 00 |         |    0 | 00/01C8               |                   _QuitGS    qtRec          
   353 |  1      App.Main.s    341 | Code        | 00 |         |    4 | 00/01C8 : 22 A8 00 E1 |                   jsl        $E100A8        
   354 |  1      App.Main.s    341 | Data        | 00 |         |    2 | 00/01CC : 29 20       |                   dw         $2029          
-  355 |  1      App.Main.s    341 | Data        | 00 |  3      |    4 | 00/01CE : 31 20 00 00 |                   adrl       qtRec          
+  355 |  1      App.Main.s    341 | Data        | 00 |  3      |    4 | 00/01CE : 2B 20 00 00 |                   adrl       qtRec          
   356 |  1      App.Main.s    342 | Code        | 00 |         |    2 | 00/01D2 : 00 00       |                   brk        $00            
   357 |  1      App.Main.s    343 | Empty       | 00 |         |    0 | 00/01D4               |                                             
   358 |  1      App.Main.s    344 | Comment     | 00 |         |    0 | 00/01D4               | ; =====================================================================
@@ -782,7 +782,7 @@
   782 |  1      App.Main.s    768 | Empty       | 00 |         |    0 | 00/0486               | InitObjects                                 
   783 |  1      App.Main.s    769 | Code        | 00 |         |    3 | 00/0486 : A2 00 00    |                   ldx        #0             
   784 |  1      App.Main.s    770 | Code        | 00 |         |    3 | 00/0489 : A9 FF FF    |                   lda        #$FFFF         
-  785 |  1      App.Main.s    771 | Code        | 00 |  2      |    3 | 00/048C : 9D 2F 19    | ozunid_4          sta        ObjArray+{2},x 
+  785 |  1      App.Main.s    771 | Code        | 00 |  2      |    3 | 00/048C : 9D 29 19    | ozunid_4          sta        ObjArray+{2},x 
   786 |  1      App.Main.s    772 | Code        | 00 |         |    1 | 00/048F : 8A          |                   txa                       
   787 |  1      App.Main.s    773 | Code        | 00 |         |    1 | 00/0490 : 18          |                   clc                       
   788 |  1      App.Main.s    774 | Code        | 00 |         |    3 | 00/0491 : 69 08 00    |                   adc        #{8}           
@@ -797,13 +797,13 @@
   797 |  1      App.Main.s    783 | Empty       | 00 |         |    0 | 00/049B               | Shape_Action                                
   798 |  1      App.Main.s    784 | Code        | 00 |         |    2 | 00/049B : C2 30       |                   rep        #$30           
   799 |  1      App.Main.s    785 | Code        | 00 |         |    3 | 00/049D : A2 00 00    |                   ldx        #0             
-  800 |  1      App.Main.s    786 | Code        | 00 |  2      |    3 | 00/04A0 : BD 2F 19    | _saLoop           lda        ObjArray+{2},x 
+  800 |  1      App.Main.s    786 | Code        | 00 |  2      |    3 | 00/04A0 : BD 29 19    | _saLoop           lda        ObjArray+{2},x 
   801 |  1      App.Main.s    787 | Code        | 00 |         |    2 | 00/04A3 : 30 0B       |                   bmi        _trySpawn      ; $FFFF = inactive → try spawn
   802 |  1      App.Main.s    788 | Comment     | 00 |         |    0 | 00/04A5               |             ; Active: decrease depth (approach player)
   803 |  1      App.Main.s    789 | Code        | 00 |         |    1 | 00/04A5 : 3A          |                   dec                       
   804 |  1      App.Main.s    790 | Code        | 00 |         |    2 | 00/04A6 : 10 03       |                   bpl        _saStore       
   805 |  1      App.Main.s    791 | Code        | 00 |         |    3 | 00/04A8 : A9 FF FF    |                   lda        #$FFFF         ; passed player → deactivate
-  806 |  1      App.Main.s    792 | Code        | 00 |  2      |    3 | 00/04AB : 9D 2F 19    | _saStore          sta        ObjArray+{2},x 
+  806 |  1      App.Main.s    792 | Code        | 00 |  2      |    3 | 00/04AB : 9D 29 19    | _saStore          sta        ObjArray+{2},x 
   807 |  1      App.Main.s    793 | Code        | 00 |         |    2 | 00/04AE : 80 2F       |                   bra        _saNext        
   808 |  1      App.Main.s    794 | Empty       | 00 |         |    0 | 00/04B0               |                                             
   809 |  1      App.Main.s    795 | Code        | 00 |  2      |    3 | 00/04B0 : 20 FA 05    | _trySpawn         jsr        ALEA           
@@ -812,13 +812,13 @@
   812 |  1      App.Main.s    798 | Code        | 00 |         |    2 | 00/04B9 : 90 24       |                   bcc        _saNext        
   813 |  1      App.Main.s    799 | Comment     | 00 |         |    0 | 00/04BB               |             ; Spawn at the horizon
   814 |  1      App.Main.s    800 | Code        | 00 |         |    3 | 00/04BB : A9 0F 00    |                   lda        #15            
-  815 |  1      App.Main.s    801 | Code        | 00 |  2      |    3 | 00/04BE : 9D 2F 19    |                   sta        ObjArray+{2},x 
+  815 |  1      App.Main.s    801 | Code        | 00 |  2      |    3 | 00/04BE : 9D 29 19    |                   sta        ObjArray+{2},x 
   816 |  1      App.Main.s    802 | Comment     | 00 |         |    0 | 00/04C1               |             ; Random nature: tree (0) or bush (2)
   817 |  1      App.Main.s    803 | Code        | 00 |  2      |    3 | 00/04C1 : 20 FA 05    |                   jsr        ALEA           
   818 |  1      App.Main.s    804 | Code        | 00 |         |    3 | 00/04C4 : 29 01 00    |                   and        #$01           ; 0 or 1
   819 |  1      App.Main.s    805 | Code        | 00 |         |    1 | 00/04C7 : 0A          |                   asl                       ; 0 or 2
-  820 |  1      App.Main.s    806 | Code        | 00 |  2      |    3 | 00/04C8 : 9D 31 19    |                   sta        ObjArray+{4},x 
-  821 |  1      App.Main.s    807 | Code        | 00 |  2      |    3 | 00/04CB : 9E 33 19    |                   stz        ObjArray+{6},x ; on the ground
+  820 |  1      App.Main.s    806 | Code        | 00 |  2      |    3 | 00/04C8 : 9D 2B 19    |                   sta        ObjArray+{4},x 
+  821 |  1      App.Main.s    807 | Code        | 00 |  2      |    3 | 00/04CB : 9E 2D 19    |                   stz        ObjArray+{6},x ; on the ground
   822 |  1      App.Main.s    808 | Comment     | 00 |         |    0 | 00/04CE               |             ; Random horizontal position: ±128 around view center
   823 |  1      App.Main.s    809 | Code        | 00 |  2      |    3 | 00/04CE : 20 FA 05    |                   jsr        ALEA           
   824 |  1      App.Main.s    810 | Code        | 00 |         |    3 | 00/04D1 : 29 FF 00    |                   and        #$FF           ; 0-255
@@ -826,7 +826,7 @@
   826 |  1      App.Main.s    812 | Code        | 00 |         |    3 | 00/04D5 : E9 80 00    |                   sbc        #$80           ; -128 to +127 (16-bit: $FF80-$007F)
   827 |  1      App.Main.s    813 | Code        | 00 |         |    1 | 00/04D8 : 18          |                   clc                       
   828 |  1      App.Main.s    814 | Code        | 00 |  2      |    3 | 00/04D9 : 6D 63 18    |                   adc        Coordonnee_X   
-  829 |  1      App.Main.s    815 | Code        | 00 |  2      |    3 | 00/04DC : 9D 2D 19    |                   sta        ObjArray+{0},x 
+  829 |  1      App.Main.s    815 | Code        | 00 |  2      |    3 | 00/04DC : 9D 27 19    |                   sta        ObjArray+{0},x 
   830 |  1      App.Main.s    816 | Empty       | 00 |         |    0 | 00/04DF               |                                             
   831 |  1      App.Main.s    817 | Code        | 00 |         |    1 | 00/04DF : 8A          | _saNext           txa                       
   832 |  1      App.Main.s    818 | Code        | 00 |         |    1 | 00/04E0 : 18          |                   clc                       
@@ -846,7 +846,7 @@
   846 |  1      App.Main.s    832 | Code        | 00 |  2      |    3 | 00/04F0 : 8D 0D 06    |                   sta        _Profondeur    
   847 |  1      App.Main.s    833 | Empty       | 00 |         |    0 | 00/04F3               |                                             
   848 |  1      App.Main.s    834 | Code        | 00 |         |    3 | 00/04F3 : A2 00 00    | _psDepth          ldx        #0             
-  849 |  1      App.Main.s    835 | Code        | 00 |  2      |    3 | 00/04F6 : BD 2F 19    | _psObj            lda        ObjArray+{2},x 
+  849 |  1      App.Main.s    835 | Code        | 00 |  2      |    3 | 00/04F6 : BD 29 19    | _psObj            lda        ObjArray+{2},x 
   850 |  1      App.Main.s    836 | Code        | 00 |  2      |    3 | 00/04F9 : CD 0D 06    |                   cmp        _Profondeur    
   851 |  1      App.Main.s    837 | Macro       | 00 |         |    0 | 00/04FC               |                   BNEL       _psNextO       
   852 |  1      App.Main.s    837 | Code        | 00 |         |    2 | 00/04FC : F0 03       |                   BEQ        ozunid_33      
@@ -856,19 +856,19 @@
   856 |  1      App.Main.s    839 | Code        | 00 |  2      |    3 | 00/0501 : 8E 0F 06    |                   stx        _Exploreur     
   857 |  1      App.Main.s    840 | Empty       | 00 |         |    0 | 00/0504               |                                             
   858 |  1      App.Main.s    841 | Comment     | 00 |         |    0 | 00/0504               |             ; Determine shape number from nature + depth
-  859 |  1      App.Main.s    842 | Code        | 00 |  2      |    3 | 00/0504 : BD 31 19    |                   lda        ObjArray+{4},x 
+  859 |  1      App.Main.s    842 | Code        | 00 |  2      |    3 | 00/0504 : BD 2B 19    |                   lda        ObjArray+{4},x 
   860 |  1      App.Main.s    843 | Code        | 00 |         |    2 | 00/0507 : F0 08       |                   beq        _psTree        
   861 |  1      App.Main.s    844 | Code        | 00 |         |    3 | 00/0509 : C9 02 00    |                   cmp        #2             
   862 |  1      App.Main.s    845 | Code        | 00 |         |    2 | 00/050C : F0 0F       |                   beq        _psBush        
   863 |  1      App.Main.s    846 | Code        | 00 |         |    3 | 00/050E : 82 8C 00    |                   brl        _psSkip        ; skip unknown natures
   864 |  1      App.Main.s    847 | Empty       | 00 |         |    0 | 00/0511               |                                             
-  865 |  1      App.Main.s    848 | Code        | 00 |  2      |    3 | 00/0511 : BD 2F 19    | _psTree           lda        ObjArray+{2},x 
+  865 |  1      App.Main.s    848 | Code        | 00 |  2      |    3 | 00/0511 : BD 29 19    | _psTree           lda        ObjArray+{2},x 
   866 |  1      App.Main.s    849 | Code        | 00 |         |    1 | 00/0514 : 18          |                   clc                       
   867 |  1      App.Main.s    850 | Code        | 00 |         |    3 | 00/0515 : 69 18 00    |                   adc        #24            ; tree entries: 24-39
   868 |  1      App.Main.s    851 | Code        | 00 |  2      |    3 | 00/0518 : 8D 11 06    |                   sta        _Nbr_Shape     
   869 |  1      App.Main.s    852 | Code        | 00 |         |    2 | 00/051B : 80 12       |                   bra        _psProject     
   870 |  1      App.Main.s    853 | Empty       | 00 |         |    0 | 00/051D               |                                             
-  871 |  1      App.Main.s    854 | Code        | 00 |  2      |    3 | 00/051D : BD 2F 19    | _psBush           lda        ObjArray+{2},x 
+  871 |  1      App.Main.s    854 | Code        | 00 |  2      |    3 | 00/051D : BD 29 19    | _psBush           lda        ObjArray+{2},x 
   872 |  1      App.Main.s    855 | Code        | 00 |         |    3 | 00/0520 : C9 0E 00    |                   cmp        #14            ; bushes only at depths 0-13
   873 |  1      App.Main.s    856 | Macro       | 00 |         |    0 | 00/0523               |                   BCSL       _psSkip        
   874 |  1      App.Main.s    856 | Code        | 00 |         |    2 | 00/0523 : 90 03       |                   BCC        ozunid_34      
@@ -880,7 +880,7 @@
   880 |  1      App.Main.s    860 | Empty       | 00 |         |    0 | 00/052F               |                                             
   881 |  1      App.Main.s    861 | Empty       | 00 |         |    0 | 00/052F               | _psProject                                  ; === Horizontal projection ===
   882 |  1      App.Main.s    862 | Comment     | 00 |         |    0 | 00/052F               |             ; screen_col = |delta| * Decalage_Y[depth] / 16, signed, + $40
-  883 |  1      App.Main.s    863 | Code        | 00 |  2      |    3 | 00/052F : BD 2D 19    |                   lda        ObjArray+{0},x 
+  883 |  1      App.Main.s    863 | Code        | 00 |  2      |    3 | 00/052F : BD 27 19    |                   lda        ObjArray+{0},x 
   884 |  1      App.Main.s    864 | Code        | 00 |         |    1 | 00/0532 : 38          |                   sec                       
   885 |  1      App.Main.s    865 | Code        | 00 |  2      |    3 | 00/0533 : ED 63 18    |                   sbc        Coordonnee_X   ; signed delta
   886 |  1      App.Main.s    866 | Code        | 00 |  2      |    3 | 00/0536 : 8D 13 06    |                   sta        _horiDelta     
@@ -895,7 +895,7 @@
   895 |  1      App.Main.s    871 | Code        | 11 |         |    2 | 00/0547 : E2 30       | _psOkV            sep        #$30           
   896 |  1      App.Main.s    872 | Code        | 11 |         |    1 | 00/0549 : 48          |                   pha                       ; save 8-bit distance
   897 |  1      App.Main.s    873 | Code        | 11 |  2      |    3 | 00/054A : AE 0D 06    |                   ldx        _Profondeur    
-  898 |  1      App.Main.s    874 | Code        | 11 |  2      |    3 | 00/054D : BD AD 19    |                   lda        Decalage_Y,x   ; perspective factor for this depth
+  898 |  1      App.Main.s    874 | Code        | 11 |  2      |    3 | 00/054D : BD A7 19    |                   lda        Decalage_Y,x   ; perspective factor for this depth
   899 |  1      App.Main.s    875 | Code        | 11 |         |    1 | 00/0550 : A8          |                   tay                       
   900 |  1      App.Main.s    876 | Code        | 11 |         |    1 | 00/0551 : 68          |                   pla                       
   901 |  1      App.Main.s    877 | Code        | 11 |  2      |    3 | 00/0552 : 20 DC 05    |                   jsr        MULTI          ; A(8) × Y(8) → A(16)
@@ -923,12 +923,12 @@
   923 |  1      App.Main.s    899 | Comment     | 00 |         |    0 | 00/0573               |             ; row = Ligne_Damier + Decalage_Y[depth] - Shape_Hauteur[shape]
   924 |  1      App.Main.s    900 | Code        | 11 |         |    2 | 00/0573 : E2 30       |                   sep        #$30           ; 8-bit A,X,Y
   925 |  1      App.Main.s    901 | Code        | 11 |  2      |    3 | 00/0575 : AE 0D 06    |                   ldx        _Profondeur    
-  926 |  1      App.Main.s    902 | Code        | 11 |  2      |    3 | 00/0578 : BD AD 19    |                   lda        Decalage_Y,x   ; rows below horizon for this depth
+  926 |  1      App.Main.s    902 | Code        | 11 |  2      |    3 | 00/0578 : BD A7 19    |                   lda        Decalage_Y,x   ; rows below horizon for this depth
   927 |  1      App.Main.s    903 | Code        | 11 |         |    1 | 00/057B : 18          |                   clc                       
   928 |  1      App.Main.s    904 | Code        | 11 |  2      |    3 | 00/057C : 6D 61 18    |                   adc        Ligne_Damier   ; absolute screen row (bottom of shape)
   929 |  1      App.Main.s    905 | Code        | 11 |  2      |    3 | 00/057F : AE 11 06    |                   ldx        _Nbr_Shape     
   930 |  1      App.Main.s    906 | Code        | 11 |         |    1 | 00/0582 : 38          |                   sec                       
-  931 |  1      App.Main.s    907 | Code        | 11 |  2      |    3 | 00/0583 : FD BD 19    |                   sbc        Shape_Hauteur,x; subtract sprite height → top row
+  931 |  1      App.Main.s    907 | Code        | 11 |  2      |    3 | 00/0583 : FD B7 19    |                   sbc        Shape_Hauteur,x; subtract sprite height → top row
   932 |  1      App.Main.s    908 | Comment     | 11 |         |    0 | 00/0586               |             ; Row bounds check
   933 |  1      App.Main.s    909 | Code        | 11 |         |    2 | 00/0586 : C9 C8       |                   cmp        #200           
   934 |  1      App.Main.s    910 | Code        | 11 |         |    2 | 00/0588 : B0 11       |                   bcs        _psSkip8       ; skip if row >= 200 (unsigned wraps too)
@@ -1262,7 +1262,7 @@
  1262 |  1      App.Main.s   1232 | Equivalence | 00 |         |    0 | 00/0839               | _FrmIdx           equ        $22            ; 2 bytes: offset into per-frame table (×6)
  1263 |  1      App.Main.s   1233 | Empty       | 00 |         |    0 | 00/0839               |                                             
  1264 |  1      App.Main.s   1234 | Empty       | 00 |         |    0 | 00/0839               | CompileSprites                              
- 1265 |  1      App.Main.s   1235 | Code        | 00 |  2      |    3 | 00/0839 : AD 35 20    |                   lda        MyDirectPage   
+ 1265 |  1      App.Main.s   1235 | Code        | 00 |  2      |    3 | 00/0839 : AD 2F 20    |                   lda        MyDirectPage   
  1266 |  1      App.Main.s   1236 | Code        | 00 |         |    1 | 00/083C : 5B          |                   tcd                       
  1267 |  1      App.Main.s   1237 | Empty       | 00 |         |    0 | 00/083D               |                                             
  1268 |  1      App.Main.s   1238 | Comment     | 00 |         |    0 | 00/083D               |             ; Store code bank for indirect long addressing later
@@ -1295,7 +1295,7 @@
  1295 |  1      App.Main.s   1265 | Code        | 10 |         |    4 | 00/0862 : 8F 34 C0 E0 |                   stal       $E0C034        
  1296 |  1      App.Main.s   1266 | Code        | 00 |         |    2 | 00/0866 : C2 20       |                   rep        #$20           
  1297 |  1      App.Main.s   1267 | Empty       | 00 |         |    0 | 00/0868               |                                             
- 1298 |  1      App.Main.s   1268 | Code        | 00 |  2      |    3 | 00/0868 : AD 35 20    |                   lda        MyDirectPage   
+ 1298 |  1      App.Main.s   1268 | Code        | 00 |  2      |    3 | 00/0868 : AD 2F 20    |                   lda        MyDirectPage   
  1299 |  1      App.Main.s   1269 | Code        | 00 |  2      |    3 | 00/086B : 20 57 0B    |                   jsr        Create_Sprite  
  1300 |  1      App.Main.s   1270 | Empty       | 00 |         |    0 | 00/086E               |                                             
  1301 |  1      App.Main.s   1271 | Comment     | 00 |         |    0 | 00/086E               |             ; Border $0C = after Damier compile
@@ -1315,7 +1315,7 @@
  1315 |  1      App.Main.s   1285 | Code        | 00 |         |    3 | 00/0882 : E0 18 00    |                   cpx        #$18           
  1316 |  1      App.Main.s   1286 | Code        | 00 |         |    2 | 00/0885 : D0 F4       |                   bne        _cpmtn         
  1317 |  1      App.Main.s   1287 | Empty       | 00 |         |    0 | 00/0887               |                                             
- 1318 |  1      App.Main.s   1288 | Code        | 00 |  2      |    3 | 00/0887 : AD 35 20    |                   lda        MyDirectPage   
+ 1318 |  1      App.Main.s   1288 | Code        | 00 |  2      |    3 | 00/0887 : AD 2F 20    |                   lda        MyDirectPage   
  1319 |  1      App.Main.s   1289 | Code        | 00 |  2      |    3 | 00/088A : 20 57 0B    |                   jsr        Create_Sprite  
  1320 |  1      App.Main.s   1290 | Empty       | 00 |         |    0 | 00/088D               |                                             
  1321 |  1      App.Main.s   1291 | Comment     | 00 |         |    0 | 00/088D               |             ; =========================================
@@ -1331,7 +1331,7 @@
  1331 |  1      App.Main.s   1301 | Empty       | 00 |         |    0 | 00/089C               |                                             
  1332 |  1      App.Main.s   1302 | Code        | 00 |         |    3 | 00/089C : A9 13 00    |                   lda        #19            
  1333 |  1      App.Main.s   1303 | Code        | 00 |         |    2 | 00/089F : 85 20       |                   sta        {$20}          
- 1334 |  1      App.Main.s   1304 | Code        | 00 |  2      |    3 | 00/08A1 : AD 35 20    | _manloop          lda        MyDirectPage   
+ 1334 |  1      App.Main.s   1304 | Code        | 00 |  2      |    3 | 00/08A1 : AD 2F 20    | _manloop          lda        MyDirectPage   
  1335 |  1      App.Main.s   1305 | Code        | 00 |  2      |    3 | 00/08A4 : 20 57 0B    |                   jsr        Create_Sprite  
  1336 |  1      App.Main.s   1306 | Code        | 00 |         |    1 | 00/08A7 : 18          |                   clc                       
  1337 |  1      App.Main.s   1307 | Code        | 00 |         |    2 | 00/08A8 : A5 04       |                   lda        $04            ; _ShapeAdr (auto-advanced past data)
@@ -1512,7 +1512,7 @@
  1512 |  1      App.Main.s   1482 | Code        | 00 |         |    3 | 00/09E9 : 69 06 00    |                   adc        #6             
  1513 |  1      App.Main.s   1483 | Code        | 00 |         |    2 | 00/09EC : 85 22       |                   sta        {$22}          
  1514 |  1      App.Main.s   1484 | Comment     | 00 |         |    0 | 00/09EE               |             ; Compile this frame
- 1515 |  1      App.Main.s   1485 | Code        | 00 |  2      |    3 | 00/09EE : AD 35 20    |                   lda        MyDirectPage   
+ 1515 |  1      App.Main.s   1485 | Code        | 00 |  2      |    3 | 00/09EE : AD 2F 20    |                   lda        MyDirectPage   
  1516 |  1      App.Main.s   1486 | Code        | 00 |  2      |    3 | 00/09F1 : 20 57 0B    |                   jsr        Create_Sprite  
  1517 |  1      App.Main.s   1487 | Code        | 00 |         |    2 | 00/09F4 : C6 20       |                   dec        {$20}          
  1518 |  1      App.Main.s   1488 | Code        | 00 |         |    2 | 00/09F6 : D0 D2       |                   bne        _cotLoop       
@@ -2324,7 +2324,7 @@
  2328 |  3  Checkerboard.s     42 | Comment     | 00 |         |    0 | 00/0EC3               | * =====================================================================
  2329 |  3  Checkerboard.s     43 | Empty       | 00 |         |    0 | 00/0EC3               | ENTER                                       
  2330 |  3  Checkerboard.s     44 | Code        | 00 |         |    1 | 00/0EC3 : 0B          |                   phd                       ; save caller's DP
- 2331 |  3  Checkerboard.s     45 | Code        | 00 |  2      |    3 | 00/0EC4 : AD 35 20    |                   lda        MyDirectPage   
+ 2331 |  3  Checkerboard.s     45 | Code        | 00 |  2      |    3 | 00/0EC4 : AD 2F 20    |                   lda        MyDirectPage   
  2332 |  3  Checkerboard.s     46 | Code        | 00 |         |    1 | 00/0EC7 : 5B          |                   tcd                       ; DP = app's assigned direct page
  2333 |  3  Checkerboard.s     47 | Code        | 00 |         |    2 | 00/0EC8 : C2 30       |                   rep        #$30           
  2334 |  3  Checkerboard.s     48 | Empty       | 00 |         |    0 | 00/0ECA               |                                             
@@ -3350,55 +3350,50 @@
  3057 |  1      App.Main.s   2035 | Comment     | 00 |         |    0 | 00/18AF               | ; Read from horizon downward (row 137→27). Each byte = palette number.
  3058 |  1      App.Main.s   2036 | Comment     | 00 |         |    0 | 00/18AF               | ; Matches FTA's SPACE.S: palettes 4-15 create blue gradient.
  3059 |  1      App.Main.s   2037 | Empty       | 00 |         |    0 | 00/18AF               | Table_Ciel                                  
- 3060 |  1      App.Main.s   2038 | Data        | 00 |         |    5 | 00/18AF : 04 04 04 04 |                   ds         5,4            ; 5 rows of palette 4  (darkest)
+ 3060 |  1      App.Main.s   2038 | Data        | 00 |         |    2 | 00/18AF : 06 06       |                   ds         2,6            ; near horizon: medium blue
+ 3061 |  1      App.Main.s   2039 | Data        | 00 |         |    3 | 00/18B1 : 07 07 07    |                   ds         3,7            
+ 3062 |  1      App.Main.s   2040 | Data        | 00 |         |    4 | 00/18B4 : 08 08 08 08 |                   ds         4,8            
+ 3063 |  1      App.Main.s   2041 | Data        | 00 |         |    5 | 00/18B8 : 09 09 09 09 |                   ds         5,9            
+      |                           |             |    |         |      |           09          |
+ 3064 |  1      App.Main.s   2042 | Data        | 00 |         |    6 | 00/18BD : 0A 0A 0A 0A |                   ds         6,10           
+      |                           |             |    |         |      |           0A 0A       |
+ 3065 |  1      App.Main.s   2043 | Data        | 00 |         |    6 | 00/18C3 : 0B 0B 0B 0B |                   ds         6,11           
+      |                           |             |    |         |      |           0B 0B       |
+ 3066 |  1      App.Main.s   2044 | Data        | 00 |         |    7 | 00/18C9 : 0C 0C 0C 0C |                   ds         7,12           
+      |                           |             |    |         |      |           0C 0C 0C    |
+ 3067 |  1      App.Main.s   2045 | Data        | 00 |         |    7 | 00/18D0 : 0D 0D 0D 0D |                   ds         7,13           
+      |                           |             |    |         |      |           0D 0D 0D    |
+ 3068 |  1      App.Main.s   2046 | Data        | 00 |         |    8 | 00/18D7 : 0E 0E 0E 0E |                   ds         8,14           
+      |                           |             |    |         |      |           0E 0E 0E 0E |
+ 3069 |  1      App.Main.s   2047 | Data        | 00 |         |    8 | 00/18DF : 0F 0F 0F 0F |                   ds         8,15           ; peak brightness
+      |                           |             |    |         |      |           0F 0F 0F 0F |
+ 3070 |  1      App.Main.s   2048 | Data        | 00 |         |    8 | 00/18E7 : 0E 0E 0E 0E |                   ds         8,14           
+      |                           |             |    |         |      |           0E 0E 0E 0E |
+ 3071 |  1      App.Main.s   2049 | Data        | 00 |         |    7 | 00/18EF : 0D 0D 0D 0D |                   ds         7,13           
+      |                           |             |    |         |      |           0D 0D 0D    |
+ 3072 |  1      App.Main.s   2050 | Data        | 00 |         |    7 | 00/18F6 : 0C 0C 0C 0C |                   ds         7,12           
+      |                           |             |    |         |      |           0C 0C 0C    |
+ 3073 |  1      App.Main.s   2051 | Data        | 00 |         |    6 | 00/18FD : 0B 0B 0B 0B |                   ds         6,11           
+      |                           |             |    |         |      |           0B 0B       |
+ 3074 |  1      App.Main.s   2052 | Data        | 00 |         |    6 | 00/1903 : 0A 0A 0A 0A |                   ds         6,10           
+      |                           |             |    |         |      |           0A 0A       |
+ 3075 |  1      App.Main.s   2053 | Data        | 00 |         |    5 | 00/1909 : 09 09 09 09 |                   ds         5,9            
+      |                           |             |    |         |      |           09          |
+ 3076 |  1      App.Main.s   2054 | Data        | 00 |         |    5 | 00/190E : 08 08 08 08 |                   ds         5,8            
+      |                           |             |    |         |      |           08          |
+ 3077 |  1      App.Main.s   2055 | Data        | 00 |         |    5 | 00/1913 : 07 07 07 07 |                   ds         5,7            
+      |                           |             |    |         |      |           07          |
+ 3078 |  1      App.Main.s   2056 | Data        | 00 |         |    5 | 00/1918 : 06 06 06 06 |                   ds         5,6            
+      |                           |             |    |         |      |           06          |
+ 3079 |  1      App.Main.s   2057 | Data        | 00 |         |    5 | 00/191D : 05 05 05 05 |                   ds         5,5            
+      |                           |             |    |         |      |           05          |
+ 3080 |  1      App.Main.s   2058 | Data        | 00 |         |    5 | 00/1922 : 04 04 04 04 |                   ds         5,4            ; top: darkest
       |                           |             |    |         |      |           04          |
- 3061 |  1      App.Main.s   2039 | Data        | 00 |         |    4 | 00/18B4 : 05 05 05 05 |                   ds         4,5            
- 3062 |  1      App.Main.s   2040 | Data        | 00 |         |    3 | 00/18B8 : 06 06 06    |                   ds         3,6            
- 3063 |  1      App.Main.s   2041 | Variable    | 00 |         |    0 | 00/18BB               | ]_A               =          7              
- 3064 |  1      App.Main.s   2043 | Data        | 00 |         |    6 | 00/18BB : 07 07 07 07 |                   ds         6,7            
-      |                           |             |    |         |      |           07 07       |
- 3065 |  1      App.Main.s   2043 | Data        | 00 |         |    6 | 00/18C1 : 08 08 08 08 |                   ds         6,8            
-      |                           |             |    |         |      |           08 08       |
- 3066 |  1      App.Main.s   2043 | Data        | 00 |         |    6 | 00/18C7 : 09 09 09 09 |                   ds         6,9            
-      |                           |             |    |         |      |           09 09       |
- 3067 |  1      App.Main.s   2043 | Data        | 00 |         |    6 | 00/18CD : 0A 0A 0A 0A |                   ds         6,10           
-      |                           |             |    |         |      |           0A 0A       |
- 3068 |  1      App.Main.s   2043 | Data        | 00 |         |    6 | 00/18D3 : 0B 0B 0B 0B |                   ds         6,11           
-      |                           |             |    |         |      |           0B 0B       |
- 3069 |  1      App.Main.s   2043 | Data        | 00 |         |    6 | 00/18D9 : 0C 0C 0C 0C |                   ds         6,12           
-      |                           |             |    |         |      |           0C 0C       |
- 3070 |  1      App.Main.s   2043 | Data        | 00 |         |    6 | 00/18DF : 0D 0D 0D 0D |                   ds         6,13           
-      |                           |             |    |         |      |           0D 0D       |
- 3071 |  1      App.Main.s   2043 | Data        | 00 |         |    6 | 00/18E5 : 0E 0E 0E 0E |                   ds         6,14           
-      |                           |             |    |         |      |           0E 0E       |
- 3072 |  1      App.Main.s   2043 | Data        | 00 |         |    6 | 00/18EB : 0F 0F 0F 0F |                   ds         6,15           
-      |                           |             |    |         |      |           0F 0F       |
- 3073 |  1      App.Main.s   2046 | Data        | 00 |         |    3 | 00/18F1 : 06 06 06    |                   ds         3,]_A-1        
- 3074 |  1      App.Main.s   2047 | Variable    | 00 |         |    0 | 00/18F4               | ]_A               =          ]_A-1          
- 3075 |  1      App.Main.s   2050 | Data        | 00 |         |    6 | 00/18F4 : 0E 0E 0E 0E |                   ds         6,14           
-      |                           |             |    |         |      |           0E 0E       |
- 3076 |  1      App.Main.s   2050 | Data        | 00 |         |    6 | 00/18FA : 0D 0D 0D 0D |                   ds         6,13           
-      |                           |             |    |         |      |           0D 0D       |
- 3077 |  1      App.Main.s   2050 | Data        | 00 |         |    6 | 00/1900 : 0C 0C 0C 0C |                   ds         6,12           
-      |                           |             |    |         |      |           0C 0C       |
- 3078 |  1      App.Main.s   2050 | Data        | 00 |         |    6 | 00/1906 : 0B 0B 0B 0B |                   ds         6,11           
-      |                           |             |    |         |      |           0B 0B       |
- 3079 |  1      App.Main.s   2050 | Data        | 00 |         |    6 | 00/190C : 0A 0A 0A 0A |                   ds         6,10           
-      |                           |             |    |         |      |           0A 0A       |
- 3080 |  1      App.Main.s   2050 | Data        | 00 |         |    6 | 00/1912 : 09 09 09 09 |                   ds         6,9            
-      |                           |             |    |         |      |           09 09       |
- 3081 |  1      App.Main.s   2050 | Data        | 00 |         |    6 | 00/1918 : 08 08 08 08 |                   ds         6,8            
-      |                           |             |    |         |      |           08 08       |
- 3082 |  1      App.Main.s   2050 | Data        | 00 |         |    6 | 00/191E : 07 07 07 07 |                   ds         6,7            
-      |                           |             |    |         |      |           07 07       |
- 3083 |  1      App.Main.s   2052 | Data        | 00 |         |    6 | 00/1924 : 05 05 05 05 |                   ds         6,5            
-      |                           |             |    |         |      |           05 05       |
- 3084 |  1      App.Main.s   2053 | Data        | 00 |         |    3 | 00/192A : 04 04 04    |                   ds         3,4            ; near top: back to dark
- 3085 |  1      App.Main.s   2054 | Empty       | 00 |         |    0 | 00/192D               |                                             
- 3086 |  1      App.Main.s   2055 | Comment     | 00 |         |    0 | 00/192D               | ; =====================================================================
- 3087 |  1      App.Main.s   2056 | Comment     | 00 |         |    0 | 00/192D               | ; Object array — MAX_OBJECTS slots × OBJ_SIZE bytes
- 3088 |  1      App.Main.s   2057 | Comment     | 00 |         |    0 | 00/192D               | ; =====================================================================
- 3089 |  1      App.Main.s   2058 | Data        | 00 |         |  128 | 00/192D : 00 00 00 00 | ObjArray          ds         {16}*{8}       
+ 3081 |  1      App.Main.s   2059 | Empty       | 00 |         |    0 | 00/1927               |                                             
+ 3082 |  1      App.Main.s   2060 | Comment     | 00 |         |    0 | 00/1927               | ; =====================================================================
+ 3083 |  1      App.Main.s   2061 | Comment     | 00 |         |    0 | 00/1927               | ; Object array — MAX_OBJECTS slots × OBJ_SIZE bytes
+ 3084 |  1      App.Main.s   2062 | Comment     | 00 |         |    0 | 00/1927               | ; =====================================================================
+ 3085 |  1      App.Main.s   2063 | Data        | 00 |         |  128 | 00/1927 : 00 00 00 00 | ObjArray          ds         {16}*{8}       
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
@@ -3430,472 +3425,472 @@
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
- 3090 |  1      App.Main.s   2059 | Empty       | 00 |         |    0 | 00/19AD               |                                             
- 3091 |  1      App.Main.s   2060 | Comment     | 00 |         |    0 | 00/19AD               | ; =====================================================================
- 3092 |  1      App.Main.s   2061 | Comment     | 00 |         |    0 | 00/19AD               | ; Decalage_Y — perspective scaling per depth level (FTA's SPACE.S)
- 3093 |  1      App.Main.s   2062 | Comment     | 00 |         |    0 | 00/19AD               | ; Index by depth (0=near, 15=far). Value = rows below horizon.
- 3094 |  1      App.Main.s   2063 | Comment     | 00 |         |    0 | 00/19AD               | ; =====================================================================
- 3095 |  1      App.Main.s   2064 | Data        | 00 |         |   16 | 00/19AD : 28 20 1A 16 | Decalage_Y        dfb        40,32,26,22,18,15,13,11,9,7,6,5,4,3,2,1
+ 3086 |  1      App.Main.s   2064 | Empty       | 00 |         |    0 | 00/19A7               |                                             
+ 3087 |  1      App.Main.s   2065 | Comment     | 00 |         |    0 | 00/19A7               | ; =====================================================================
+ 3088 |  1      App.Main.s   2066 | Comment     | 00 |         |    0 | 00/19A7               | ; Decalage_Y — perspective scaling per depth level (FTA's SPACE.S)
+ 3089 |  1      App.Main.s   2067 | Comment     | 00 |         |    0 | 00/19A7               | ; Index by depth (0=near, 15=far). Value = rows below horizon.
+ 3090 |  1      App.Main.s   2068 | Comment     | 00 |         |    0 | 00/19A7               | ; =====================================================================
+ 3091 |  1      App.Main.s   2069 | Data        | 00 |         |   16 | 00/19A7 : 28 20 1A 16 | Decalage_Y        dfb        40,32,26,22,18,15,13,11,9,7,6,5,4,3,2,1
       |                           |             |    |         |      |           12 0F 0D 0B |
       |                           |             |    |         |      |           09 07 06 05 |
       |                           |             |    |         |      |           04 03 02 01 |
- 3096 |  1      App.Main.s   2065 | Empty       | 00 |         |    0 | 00/19BD               |                                             
- 3097 |  1      App.Main.s   2066 | Comment     | 00 |         |    0 | 00/19BD               | ; =====================================================================
- 3098 |  1      App.Main.s   2067 | Comment     | 00 |         |    0 | 00/19BD               | ; Shape_Hauteur — sprite height (rows) indexed by TABLE_ROUT entry
- 3099 |  1      App.Main.s   2068 | Comment     | 00 |         |    0 | 00/19BD               | ; Entries 0-23 unused (damier/man), padded with zeros.
- 3100 |  1      App.Main.s   2069 | Comment     | 00 |         |    0 | 00/19BD               | ; =====================================================================
- 3101 |  1      App.Main.s   2070 | Empty       | 00 |         |    0 | 00/19BD               | Shape_Hauteur                               
- 3102 |  1      App.Main.s   2071 | Data        | 00 |         |   24 | 00/19BD : 00 00 00 00 |                   ds         24,0           ; padding for entries 0-23
+ 3092 |  1      App.Main.s   2070 | Empty       | 00 |         |    0 | 00/19B7               |                                             
+ 3093 |  1      App.Main.s   2071 | Comment     | 00 |         |    0 | 00/19B7               | ; =====================================================================
+ 3094 |  1      App.Main.s   2072 | Comment     | 00 |         |    0 | 00/19B7               | ; Shape_Hauteur — sprite height (rows) indexed by TABLE_ROUT entry
+ 3095 |  1      App.Main.s   2073 | Comment     | 00 |         |    0 | 00/19B7               | ; Entries 0-23 unused (damier/man), padded with zeros.
+ 3096 |  1      App.Main.s   2074 | Comment     | 00 |         |    0 | 00/19B7               | ; =====================================================================
+ 3097 |  1      App.Main.s   2075 | Empty       | 00 |         |    0 | 00/19B7               | Shape_Hauteur                               
+ 3098 |  1      App.Main.s   2076 | Data        | 00 |         |   24 | 00/19B7 : 00 00 00 00 |                   ds         24,0           ; padding for entries 0-23
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
- 3103 |  1      App.Main.s   2072 | Empty       | 00 |         |    0 | 00/19D5               |                                             
- 3104 |  1      App.Main.s   2073 | Comment     | 00 |         |    0 | 00/19D5               |             ; Tree (entries 24-39, depths 0-15)
- 3105 |  1      App.Main.s   2074 | Data        | 00 |         |    8 | 00/19D5 : 79 50 3C 30 |                   dfb        $79,$50,$3C,$30,$28,$21,$1D,$19
+ 3099 |  1      App.Main.s   2077 | Empty       | 00 |         |    0 | 00/19CF               |                                             
+ 3100 |  1      App.Main.s   2078 | Comment     | 00 |         |    0 | 00/19CF               |             ; Tree (entries 24-39, depths 0-15)
+ 3101 |  1      App.Main.s   2079 | Data        | 00 |         |    8 | 00/19CF : 79 50 3C 30 |                   dfb        $79,$50,$3C,$30,$28,$21,$1D,$19
       |                           |             |    |         |      |           28 21 1D 19 |
- 3106 |  1      App.Main.s   2075 | Data        | 00 |         |    8 | 00/19DD : 17 14 13 11 |                   dfb        $17,$14,$13,$11,$11,$10,$0F,$0E
+ 3102 |  1      App.Main.s   2080 | Data        | 00 |         |    8 | 00/19D7 : 17 14 13 11 |                   dfb        $17,$14,$13,$11,$11,$10,$0F,$0E
       |                           |             |    |         |      |           11 10 0F 0E |
- 3107 |  1      App.Main.s   2076 | Empty       | 00 |         |    0 | 00/19E5               |                                             
- 3108 |  1      App.Main.s   2077 | Comment     | 00 |         |    0 | 00/19E5               |             ; Explosion (entries 40-50)
- 3109 |  1      App.Main.s   2078 | Data        | 00 |         |   11 | 00/19E5 : 24 1D 17 13 |                   dfb        36,29,23,19,18,15,14,12,10,9,8
+ 3103 |  1      App.Main.s   2081 | Empty       | 00 |         |    0 | 00/19DF               |                                             
+ 3104 |  1      App.Main.s   2082 | Comment     | 00 |         |    0 | 00/19DF               |             ; Explosion (entries 40-50)
+ 3105 |  1      App.Main.s   2083 | Data        | 00 |         |   11 | 00/19DF : 24 1D 17 13 |                   dfb        36,29,23,19,18,15,14,12,10,9,8
       |                           |             |    |         |      |           12 0F 0E 0C |
       |                           |             |    |         |      |           0A 09 08    |
- 3110 |  1      App.Main.s   2079 | Empty       | 00 |         |    0 | 00/19F0               |                                             
- 3111 |  1      App.Main.s   2080 | Comment     | 00 |         |    0 | 00/19F0               |             ; Tir (entries 51-61)
- 3112 |  1      App.Main.s   2081 | Data        | 00 |         |   11 | 00/19F0 : 0E 0E 0A 08 |                   dfb        14,14,10,8,7,6,5,4,4,4,3
+ 3106 |  1      App.Main.s   2084 | Empty       | 00 |         |    0 | 00/19EA               |                                             
+ 3107 |  1      App.Main.s   2085 | Comment     | 00 |         |    0 | 00/19EA               |             ; Tir (entries 51-61)
+ 3108 |  1      App.Main.s   2086 | Data        | 00 |         |   11 | 00/19EA : 0E 0E 0A 08 |                   dfb        14,14,10,8,7,6,5,4,4,4,3
       |                           |             |    |         |      |           07 06 05 04 |
       |                           |             |    |         |      |           04 04 03    |
- 3113 |  1      App.Main.s   2082 | Empty       | 00 |         |    0 | 00/19FB               |                                             
- 3114 |  1      App.Main.s   2083 | Comment     | 00 |         |    0 | 00/19FB               |             ; Pierre (entries 62-69)
- 3115 |  1      App.Main.s   2084 | Data        | 00 |         |    8 | 00/19FB : 1D 14 0E 0B |                   dfb        29,20,14,11,10,9,7,6
+ 3109 |  1      App.Main.s   2087 | Empty       | 00 |         |    0 | 00/19F5               |                                             
+ 3110 |  1      App.Main.s   2088 | Comment     | 00 |         |    0 | 00/19F5               |             ; Pierre (entries 62-69)
+ 3111 |  1      App.Main.s   2089 | Data        | 00 |         |    8 | 00/19F5 : 1D 14 0E 0B |                   dfb        29,20,14,11,10,9,7,6
       |                           |             |    |         |      |           0A 09 07 06 |
- 3116 |  1      App.Main.s   2085 | Empty       | 00 |         |    0 | 00/1A03               |                                             
- 3117 |  1      App.Main.s   2086 | Comment     | 00 |         |    0 | 00/1A03               |             ; Ombre (entries 70-77)
- 3118 |  1      App.Main.s   2087 | Data        | 00 |         |    8 | 00/1A03 : 0C 09 06 05 |                   dfb        12,9,6,5,4,3,2,1
+ 3112 |  1      App.Main.s   2090 | Empty       | 00 |         |    0 | 00/19FD               |                                             
+ 3113 |  1      App.Main.s   2091 | Comment     | 00 |         |    0 | 00/19FD               |             ; Ombre (entries 70-77)
+ 3114 |  1      App.Main.s   2092 | Data        | 00 |         |    8 | 00/19FD : 0C 09 06 05 |                   dfb        12,9,6,5,4,3,2,1
       |                           |             |    |         |      |           04 03 02 01 |
- 3119 |  1      App.Main.s   2088 | Empty       | 00 |         |    0 | 00/1A0B               |                                             
- 3120 |  1      App.Main.s   2089 | Comment     | 00 |         |    0 | 00/1A0B               |             ; Buisson (entries 78-91)
- 3121 |  1      App.Main.s   2090 | Data        | 00 |         |   14 | 00/1A0B : 1D 12 0E 0B |                   dfb        29,18,14,11,9,8,7,6,5,5,4,4,4,2
+ 3115 |  1      App.Main.s   2093 | Empty       | 00 |         |    0 | 00/1A05               |                                             
+ 3116 |  1      App.Main.s   2094 | Comment     | 00 |         |    0 | 00/1A05               |             ; Buisson (entries 78-91)
+ 3117 |  1      App.Main.s   2095 | Data        | 00 |         |   14 | 00/1A05 : 1D 12 0E 0B |                   dfb        29,18,14,11,9,8,7,6,5,5,4,4,4,2
       |                           |             |    |         |      |           09 08 07 06 |
       |                           |             |    |         |      |           05 05 04 04 |
       |                           |             |    |         |      |           04 02       |
- 3122 |  1      App.Main.s   2091 | Empty       | 00 |         |    0 | 00/1A19               |                                             
- 3123 |  1      App.Main.s   2092 | Comment     | 00 |         |    0 | 00/1A19               |             ; Ship (entries 92-106)
- 3124 |  1      App.Main.s   2093 | Data        | 00 |         |   15 | 00/1A19 : 23 16 10 0D |                   dfb        35,22,16,13,10,9,7,6,6,5,4,4,4,3,3
+ 3118 |  1      App.Main.s   2096 | Empty       | 00 |         |    0 | 00/1A13               |                                             
+ 3119 |  1      App.Main.s   2097 | Comment     | 00 |         |    0 | 00/1A13               |             ; Ship (entries 92-106)
+ 3120 |  1      App.Main.s   2098 | Data        | 00 |         |   15 | 00/1A13 : 23 16 10 0D |                   dfb        35,22,16,13,10,9,7,6,6,5,4,4,4,3,3
       |                           |             |    |         |      |           0A 09 07 06 |
       |                           |             |    |         |      |           06 05 04 04 |
       |                           |             |    |         |      |           04 03 03    |
- 3125 |  1      App.Main.s   2094 | Empty       | 00 |         |    0 | 00/1A28               |                                             
- 3126 |  1      App.Main.s   2095 | Comment     | 00 |         |    0 | 00/1A28               |             ; Trident (entries 107-115)
- 3127 |  1      App.Main.s   2096 | Data        | 00 |         |    9 | 00/1A28 : 30 2A 22 17 |                   dfb        48,42,34,23,18,15,12,11,7
+ 3121 |  1      App.Main.s   2099 | Empty       | 00 |         |    0 | 00/1A22               |                                             
+ 3122 |  1      App.Main.s   2100 | Comment     | 00 |         |    0 | 00/1A22               |             ; Trident (entries 107-115)
+ 3123 |  1      App.Main.s   2101 | Data        | 00 |         |    9 | 00/1A22 : 30 2A 22 17 |                   dfb        48,42,34,23,18,15,12,11,7
       |                           |             |    |         |      |           12 0F 0C 0B |
       |                           |             |    |         |      |           07          |
- 3128 |  1      App.Main.s   2097 | Empty       | 00 |         |    0 | 00/1A31               |                                             
- 3129 |  1      App.Main.s   2098 | Comment     | 00 |         |    0 | 00/1A31               | ; =====================================================================
- 3130 |  1      App.Main.s   2099 | Comment     | 00 |         |    0 | 00/1A31               | ; MULTI lookup tables (FTA's SPACE.S)
- 3131 |  1      App.Main.s   2100 | Comment     | 00 |         |    0 | 00/1A31               | ; =====================================================================
- 3132 |  1      App.Main.s   2101 | Empty       | 00 |         |    0 | 00/1A31               |                                             
- 3133 |  1      App.Main.s   2102 | Comment     | 00 |         |    0 | 00/1A31               | ; HAUTBAS — high nibble of Y replicated across all positions
- 3134 |  1      App.Main.s   2103 | Data        | 00 |         |   16 | 00/1A31 : 00 00 00 00 | HAUTBAS           hex        00000000000000000000000000000000
+ 3124 |  1      App.Main.s   2102 | Empty       | 00 |         |    0 | 00/1A2B               |                                             
+ 3125 |  1      App.Main.s   2103 | Comment     | 00 |         |    0 | 00/1A2B               | ; =====================================================================
+ 3126 |  1      App.Main.s   2104 | Comment     | 00 |         |    0 | 00/1A2B               | ; MULTI lookup tables (FTA's SPACE.S)
+ 3127 |  1      App.Main.s   2105 | Comment     | 00 |         |    0 | 00/1A2B               | ; =====================================================================
+ 3128 |  1      App.Main.s   2106 | Empty       | 00 |         |    0 | 00/1A2B               |                                             
+ 3129 |  1      App.Main.s   2107 | Comment     | 00 |         |    0 | 00/1A2B               | ; HAUTBAS — high nibble of Y replicated across all positions
+ 3130 |  1      App.Main.s   2108 | Data        | 00 |         |   16 | 00/1A2B : 00 00 00 00 | HAUTBAS           hex        00000000000000000000000000000000
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
- 3135 |  1      App.Main.s   2104 | Data        | 00 |         |   16 | 00/1A41 : 01 01 01 01 |                   hex        01010101010101010101010101010101
+ 3131 |  1      App.Main.s   2109 | Data        | 00 |         |   16 | 00/1A3B : 01 01 01 01 |                   hex        01010101010101010101010101010101
       |                           |             |    |         |      |           01 01 01 01 |
       |                           |             |    |         |      |           01 01 01 01 |
       |                           |             |    |         |      |           01 01 01 01 |
- 3136 |  1      App.Main.s   2105 | Data        | 00 |         |   16 | 00/1A51 : 02 02 02 02 |                   hex        02020202020202020202020202020202
+ 3132 |  1      App.Main.s   2110 | Data        | 00 |         |   16 | 00/1A4B : 02 02 02 02 |                   hex        02020202020202020202020202020202
       |                           |             |    |         |      |           02 02 02 02 |
       |                           |             |    |         |      |           02 02 02 02 |
       |                           |             |    |         |      |           02 02 02 02 |
- 3137 |  1      App.Main.s   2106 | Data        | 00 |         |   16 | 00/1A61 : 03 03 03 03 |                   hex        03030303030303030303030303030303
+ 3133 |  1      App.Main.s   2111 | Data        | 00 |         |   16 | 00/1A5B : 03 03 03 03 |                   hex        03030303030303030303030303030303
       |                           |             |    |         |      |           03 03 03 03 |
       |                           |             |    |         |      |           03 03 03 03 |
       |                           |             |    |         |      |           03 03 03 03 |
- 3138 |  1      App.Main.s   2107 | Data        | 00 |         |   16 | 00/1A71 : 04 04 04 04 |                   hex        04040404040404040404040404040404
+ 3134 |  1      App.Main.s   2112 | Data        | 00 |         |   16 | 00/1A6B : 04 04 04 04 |                   hex        04040404040404040404040404040404
       |                           |             |    |         |      |           04 04 04 04 |
       |                           |             |    |         |      |           04 04 04 04 |
       |                           |             |    |         |      |           04 04 04 04 |
- 3139 |  1      App.Main.s   2108 | Data        | 00 |         |   16 | 00/1A81 : 05 05 05 05 |                   hex        05050505050505050505050505050505
+ 3135 |  1      App.Main.s   2113 | Data        | 00 |         |   16 | 00/1A7B : 05 05 05 05 |                   hex        05050505050505050505050505050505
       |                           |             |    |         |      |           05 05 05 05 |
       |                           |             |    |         |      |           05 05 05 05 |
       |                           |             |    |         |      |           05 05 05 05 |
- 3140 |  1      App.Main.s   2109 | Data        | 00 |         |   16 | 00/1A91 : 06 06 06 06 |                   hex        06060606060606060606060606060606
+ 3136 |  1      App.Main.s   2114 | Data        | 00 |         |   16 | 00/1A8B : 06 06 06 06 |                   hex        06060606060606060606060606060606
       |                           |             |    |         |      |           06 06 06 06 |
       |                           |             |    |         |      |           06 06 06 06 |
       |                           |             |    |         |      |           06 06 06 06 |
- 3141 |  1      App.Main.s   2110 | Data        | 00 |         |   16 | 00/1AA1 : 07 07 07 07 |                   hex        07070707070707070707070707070707
+ 3137 |  1      App.Main.s   2115 | Data        | 00 |         |   16 | 00/1A9B : 07 07 07 07 |                   hex        07070707070707070707070707070707
       |                           |             |    |         |      |           07 07 07 07 |
       |                           |             |    |         |      |           07 07 07 07 |
       |                           |             |    |         |      |           07 07 07 07 |
- 3142 |  1      App.Main.s   2111 | Data        | 00 |         |   16 | 00/1AB1 : 08 08 08 08 |                   hex        08080808080808080808080808080808
+ 3138 |  1      App.Main.s   2116 | Data        | 00 |         |   16 | 00/1AAB : 08 08 08 08 |                   hex        08080808080808080808080808080808
       |                           |             |    |         |      |           08 08 08 08 |
       |                           |             |    |         |      |           08 08 08 08 |
       |                           |             |    |         |      |           08 08 08 08 |
- 3143 |  1      App.Main.s   2112 | Data        | 00 |         |   16 | 00/1AC1 : 09 09 09 09 |                   hex        09090909090909090909090909090909
+ 3139 |  1      App.Main.s   2117 | Data        | 00 |         |   16 | 00/1ABB : 09 09 09 09 |                   hex        09090909090909090909090909090909
       |                           |             |    |         |      |           09 09 09 09 |
       |                           |             |    |         |      |           09 09 09 09 |
       |                           |             |    |         |      |           09 09 09 09 |
- 3144 |  1      App.Main.s   2113 | Data        | 00 |         |   16 | 00/1AD1 : 0A 0A 0A 0A |                   hex        0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A
+ 3140 |  1      App.Main.s   2118 | Data        | 00 |         |   16 | 00/1ACB : 0A 0A 0A 0A |                   hex        0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A0A
       |                           |             |    |         |      |           0A 0A 0A 0A |
       |                           |             |    |         |      |           0A 0A 0A 0A |
       |                           |             |    |         |      |           0A 0A 0A 0A |
- 3145 |  1      App.Main.s   2114 | Data        | 00 |         |   16 | 00/1AE1 : 0B 0B 0B 0B |                   hex        0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B
+ 3141 |  1      App.Main.s   2119 | Data        | 00 |         |   16 | 00/1ADB : 0B 0B 0B 0B |                   hex        0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B0B
       |                           |             |    |         |      |           0B 0B 0B 0B |
       |                           |             |    |         |      |           0B 0B 0B 0B |
       |                           |             |    |         |      |           0B 0B 0B 0B |
- 3146 |  1      App.Main.s   2115 | Data        | 00 |         |   16 | 00/1AF1 : 0C 0C 0C 0C |                   hex        0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C
+ 3142 |  1      App.Main.s   2120 | Data        | 00 |         |   16 | 00/1AEB : 0C 0C 0C 0C |                   hex        0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C0C
       |                           |             |    |         |      |           0C 0C 0C 0C |
       |                           |             |    |         |      |           0C 0C 0C 0C |
       |                           |             |    |         |      |           0C 0C 0C 0C |
- 3147 |  1      App.Main.s   2116 | Data        | 00 |         |   16 | 00/1B01 : 0D 0D 0D 0D |                   hex        0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D
+ 3143 |  1      App.Main.s   2121 | Data        | 00 |         |   16 | 00/1AFB : 0D 0D 0D 0D |                   hex        0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D0D
       |                           |             |    |         |      |           0D 0D 0D 0D |
       |                           |             |    |         |      |           0D 0D 0D 0D |
       |                           |             |    |         |      |           0D 0D 0D 0D |
- 3148 |  1      App.Main.s   2117 | Data        | 00 |         |   16 | 00/1B11 : 0E 0E 0E 0E |                   hex        0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E
+ 3144 |  1      App.Main.s   2122 | Data        | 00 |         |   16 | 00/1B0B : 0E 0E 0E 0E |                   hex        0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E0E
       |                           |             |    |         |      |           0E 0E 0E 0E |
       |                           |             |    |         |      |           0E 0E 0E 0E |
       |                           |             |    |         |      |           0E 0E 0E 0E |
- 3149 |  1      App.Main.s   2118 | Data        | 00 |         |   16 | 00/1B21 : 0F 0F 0F 0F |                   hex        0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F
+ 3145 |  1      App.Main.s   2123 | Data        | 00 |         |   16 | 00/1B1B : 0F 0F 0F 0F |                   hex        0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F
       |                           |             |    |         |      |           0F 0F 0F 0F |
       |                           |             |    |         |      |           0F 0F 0F 0F |
       |                           |             |    |         |      |           0F 0F 0F 0F |
- 3150 |  1      App.Main.s   2119 | Empty       | 00 |         |    0 | 00/1B31               |                                             
- 3151 |  1      App.Main.s   2120 | Comment     | 00 |         |    0 | 00/1B31               | ; BASHAUT — low nibble of Y shifted to high nibble
- 3152 |  1      App.Main.s   2121 | Data        | 00 |         |   16 | 00/1B31 : 00 10 20 30 | BASHAUT           hex        00102030405060708090A0B0C0D0E0F0
+ 3146 |  1      App.Main.s   2124 | Empty       | 00 |         |    0 | 00/1B2B               |                                             
+ 3147 |  1      App.Main.s   2125 | Comment     | 00 |         |    0 | 00/1B2B               | ; BASHAUT — low nibble of Y shifted to high nibble
+ 3148 |  1      App.Main.s   2126 | Data        | 00 |         |   16 | 00/1B2B : 00 10 20 30 | BASHAUT           hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3153 |  1      App.Main.s   2122 | Data        | 00 |         |   16 | 00/1B41 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3149 |  1      App.Main.s   2127 | Data        | 00 |         |   16 | 00/1B3B : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3154 |  1      App.Main.s   2123 | Data        | 00 |         |   16 | 00/1B51 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3150 |  1      App.Main.s   2128 | Data        | 00 |         |   16 | 00/1B4B : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3155 |  1      App.Main.s   2124 | Data        | 00 |         |   16 | 00/1B61 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3151 |  1      App.Main.s   2129 | Data        | 00 |         |   16 | 00/1B5B : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3156 |  1      App.Main.s   2125 | Data        | 00 |         |   16 | 00/1B71 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3152 |  1      App.Main.s   2130 | Data        | 00 |         |   16 | 00/1B6B : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3157 |  1      App.Main.s   2126 | Data        | 00 |         |   16 | 00/1B81 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3153 |  1      App.Main.s   2131 | Data        | 00 |         |   16 | 00/1B7B : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3158 |  1      App.Main.s   2127 | Data        | 00 |         |   16 | 00/1B91 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3154 |  1      App.Main.s   2132 | Data        | 00 |         |   16 | 00/1B8B : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3159 |  1      App.Main.s   2128 | Data        | 00 |         |   16 | 00/1BA1 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3155 |  1      App.Main.s   2133 | Data        | 00 |         |   16 | 00/1B9B : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3160 |  1      App.Main.s   2129 | Data        | 00 |         |   16 | 00/1BB1 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3156 |  1      App.Main.s   2134 | Data        | 00 |         |   16 | 00/1BAB : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3161 |  1      App.Main.s   2130 | Data        | 00 |         |   16 | 00/1BC1 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3157 |  1      App.Main.s   2135 | Data        | 00 |         |   16 | 00/1BBB : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3162 |  1      App.Main.s   2131 | Data        | 00 |         |   16 | 00/1BD1 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3158 |  1      App.Main.s   2136 | Data        | 00 |         |   16 | 00/1BCB : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3163 |  1      App.Main.s   2132 | Data        | 00 |         |   16 | 00/1BE1 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3159 |  1      App.Main.s   2137 | Data        | 00 |         |   16 | 00/1BDB : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3164 |  1      App.Main.s   2133 | Data        | 00 |         |   16 | 00/1BF1 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3160 |  1      App.Main.s   2138 | Data        | 00 |         |   16 | 00/1BEB : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3165 |  1      App.Main.s   2134 | Data        | 00 |         |   16 | 00/1C01 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3161 |  1      App.Main.s   2139 | Data        | 00 |         |   16 | 00/1BFB : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3166 |  1      App.Main.s   2135 | Data        | 00 |         |   16 | 00/1C11 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3162 |  1      App.Main.s   2140 | Data        | 00 |         |   16 | 00/1C0B : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3167 |  1      App.Main.s   2136 | Data        | 00 |         |   16 | 00/1C21 : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
+ 3163 |  1      App.Main.s   2141 | Data        | 00 |         |   16 | 00/1C1B : 00 10 20 30 |                   hex        00102030405060708090A0B0C0D0E0F0
       |                           |             |    |         |      |           40 50 60 70 |
       |                           |             |    |         |      |           80 90 A0 B0 |
       |                           |             |    |         |      |           C0 D0 E0 F0 |
- 3168 |  1      App.Main.s   2137 | Empty       | 00 |         |    0 | 00/1C31               |                                             
- 3169 |  1      App.Main.s   2138 | Comment     | 00 |         |    0 | 00/1C31               | ; BASBAS — low nibble identity
- 3170 |  1      App.Main.s   2139 | Data        | 00 |         |   16 | 00/1C31 : 00 01 02 03 | BASBAS            hex        000102030405060708090A0B0C0D0E0F
+ 3164 |  1      App.Main.s   2142 | Empty       | 00 |         |    0 | 00/1C2B               |                                             
+ 3165 |  1      App.Main.s   2143 | Comment     | 00 |         |    0 | 00/1C2B               | ; BASBAS — low nibble identity
+ 3166 |  1      App.Main.s   2144 | Data        | 00 |         |   16 | 00/1C2B : 00 01 02 03 | BASBAS            hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3171 |  1      App.Main.s   2140 | Data        | 00 |         |   16 | 00/1C41 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3167 |  1      App.Main.s   2145 | Data        | 00 |         |   16 | 00/1C3B : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3172 |  1      App.Main.s   2141 | Data        | 00 |         |   16 | 00/1C51 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3168 |  1      App.Main.s   2146 | Data        | 00 |         |   16 | 00/1C4B : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3173 |  1      App.Main.s   2142 | Data        | 00 |         |   16 | 00/1C61 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3169 |  1      App.Main.s   2147 | Data        | 00 |         |   16 | 00/1C5B : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3174 |  1      App.Main.s   2143 | Data        | 00 |         |   16 | 00/1C71 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3170 |  1      App.Main.s   2148 | Data        | 00 |         |   16 | 00/1C6B : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3175 |  1      App.Main.s   2144 | Data        | 00 |         |   16 | 00/1C81 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3171 |  1      App.Main.s   2149 | Data        | 00 |         |   16 | 00/1C7B : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3176 |  1      App.Main.s   2145 | Data        | 00 |         |   16 | 00/1C91 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3172 |  1      App.Main.s   2150 | Data        | 00 |         |   16 | 00/1C8B : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3177 |  1      App.Main.s   2146 | Data        | 00 |         |   16 | 00/1CA1 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3173 |  1      App.Main.s   2151 | Data        | 00 |         |   16 | 00/1C9B : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3178 |  1      App.Main.s   2147 | Data        | 00 |         |   16 | 00/1CB1 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3174 |  1      App.Main.s   2152 | Data        | 00 |         |   16 | 00/1CAB : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3179 |  1      App.Main.s   2148 | Data        | 00 |         |   16 | 00/1CC1 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3175 |  1      App.Main.s   2153 | Data        | 00 |         |   16 | 00/1CBB : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3180 |  1      App.Main.s   2149 | Data        | 00 |         |   16 | 00/1CD1 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3176 |  1      App.Main.s   2154 | Data        | 00 |         |   16 | 00/1CCB : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3181 |  1      App.Main.s   2150 | Data        | 00 |         |   16 | 00/1CE1 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3177 |  1      App.Main.s   2155 | Data        | 00 |         |   16 | 00/1CDB : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3182 |  1      App.Main.s   2151 | Data        | 00 |         |   16 | 00/1CF1 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3178 |  1      App.Main.s   2156 | Data        | 00 |         |   16 | 00/1CEB : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3183 |  1      App.Main.s   2152 | Data        | 00 |         |   16 | 00/1D01 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3179 |  1      App.Main.s   2157 | Data        | 00 |         |   16 | 00/1CFB : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3184 |  1      App.Main.s   2153 | Data        | 00 |         |   16 | 00/1D11 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3180 |  1      App.Main.s   2158 | Data        | 00 |         |   16 | 00/1D0B : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3185 |  1      App.Main.s   2154 | Data        | 00 |         |   16 | 00/1D21 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3181 |  1      App.Main.s   2159 | Data        | 00 |         |   16 | 00/1D1B : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3186 |  1      App.Main.s   2155 | Empty       | 00 |         |    0 | 00/1D31               |                                             
- 3187 |  1      App.Main.s   2156 | Comment     | 00 |         |    0 | 00/1D31               | ; MULTIT1 — 4-bit × 4-bit product table (256 bytes)
- 3188 |  1      App.Main.s   2157 | Data        | 00 |         |   16 | 00/1D31 : 00 00 00 00 | MULTIT1           hex        00000000000000000000000000000000
+ 3182 |  1      App.Main.s   2160 | Empty       | 00 |         |    0 | 00/1D2B               |                                             
+ 3183 |  1      App.Main.s   2161 | Comment     | 00 |         |    0 | 00/1D2B               | ; MULTIT1 — 4-bit × 4-bit product table (256 bytes)
+ 3184 |  1      App.Main.s   2162 | Data        | 00 |         |   16 | 00/1D2B : 00 00 00 00 | MULTIT1           hex        00000000000000000000000000000000
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
- 3189 |  1      App.Main.s   2158 | Data        | 00 |         |   16 | 00/1D41 : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
+ 3185 |  1      App.Main.s   2163 | Data        | 00 |         |   16 | 00/1D3B : 00 01 02 03 |                   hex        000102030405060708090A0B0C0D0E0F
       |                           |             |    |         |      |           04 05 06 07 |
       |                           |             |    |         |      |           08 09 0A 0B |
       |                           |             |    |         |      |           0C 0D 0E 0F |
- 3190 |  1      App.Main.s   2159 | Data        | 00 |         |   16 | 00/1D51 : 00 02 04 06 |                   hex        00020406080A0C0E10121416181A1C1E
+ 3186 |  1      App.Main.s   2164 | Data        | 00 |         |   16 | 00/1D4B : 00 02 04 06 |                   hex        00020406080A0C0E10121416181A1C1E
       |                           |             |    |         |      |           08 0A 0C 0E |
       |                           |             |    |         |      |           10 12 14 16 |
       |                           |             |    |         |      |           18 1A 1C 1E |
- 3191 |  1      App.Main.s   2160 | Data        | 00 |         |   16 | 00/1D61 : 00 03 06 09 |                   hex        000306090C0F1215181B1E2124272A2D
+ 3187 |  1      App.Main.s   2165 | Data        | 00 |         |   16 | 00/1D5B : 00 03 06 09 |                   hex        000306090C0F1215181B1E2124272A2D
       |                           |             |    |         |      |           0C 0F 12 15 |
       |                           |             |    |         |      |           18 1B 1E 21 |
       |                           |             |    |         |      |           24 27 2A 2D |
- 3192 |  1      App.Main.s   2161 | Data        | 00 |         |   16 | 00/1D71 : 00 04 08 0C |                   hex        0004080C1014181C2024282C3034383C
+ 3188 |  1      App.Main.s   2166 | Data        | 00 |         |   16 | 00/1D6B : 00 04 08 0C |                   hex        0004080C1014181C2024282C3034383C
       |                           |             |    |         |      |           10 14 18 1C |
       |                           |             |    |         |      |           20 24 28 2C |
       |                           |             |    |         |      |           30 34 38 3C |
- 3193 |  1      App.Main.s   2162 | Data        | 00 |         |   16 | 00/1D81 : 00 05 0A 0F |                   hex        00050A0F14191E23282D32373C41464B
+ 3189 |  1      App.Main.s   2167 | Data        | 00 |         |   16 | 00/1D7B : 00 05 0A 0F |                   hex        00050A0F14191E23282D32373C41464B
       |                           |             |    |         |      |           14 19 1E 23 |
       |                           |             |    |         |      |           28 2D 32 37 |
       |                           |             |    |         |      |           3C 41 46 4B |
- 3194 |  1      App.Main.s   2163 | Data        | 00 |         |   16 | 00/1D91 : 00 06 0C 12 |                   hex        00060C12181E242A30363C42484E545A
+ 3190 |  1      App.Main.s   2168 | Data        | 00 |         |   16 | 00/1D8B : 00 06 0C 12 |                   hex        00060C12181E242A30363C42484E545A
       |                           |             |    |         |      |           18 1E 24 2A |
       |                           |             |    |         |      |           30 36 3C 42 |
       |                           |             |    |         |      |           48 4E 54 5A |
- 3195 |  1      App.Main.s   2164 | Data        | 00 |         |   16 | 00/1DA1 : 00 07 0E 15 |                   hex        00070E151C232A31383F464D545B6269
+ 3191 |  1      App.Main.s   2169 | Data        | 00 |         |   16 | 00/1D9B : 00 07 0E 15 |                   hex        00070E151C232A31383F464D545B6269
       |                           |             |    |         |      |           1C 23 2A 31 |
       |                           |             |    |         |      |           38 3F 46 4D |
       |                           |             |    |         |      |           54 5B 62 69 |
- 3196 |  1      App.Main.s   2165 | Data        | 00 |         |   16 | 00/1DB1 : 00 08 10 18 |                   hex        00081018202830384048505860687078
+ 3192 |  1      App.Main.s   2170 | Data        | 00 |         |   16 | 00/1DAB : 00 08 10 18 |                   hex        00081018202830384048505860687078
       |                           |             |    |         |      |           20 28 30 38 |
       |                           |             |    |         |      |           40 48 50 58 |
       |                           |             |    |         |      |           60 68 70 78 |
- 3197 |  1      App.Main.s   2166 | Data        | 00 |         |   16 | 00/1DC1 : 00 09 12 1B |                   hex        0009121B242D363F48515A636C757E87
+ 3193 |  1      App.Main.s   2171 | Data        | 00 |         |   16 | 00/1DBB : 00 09 12 1B |                   hex        0009121B242D363F48515A636C757E87
       |                           |             |    |         |      |           24 2D 36 3F |
       |                           |             |    |         |      |           48 51 5A 63 |
       |                           |             |    |         |      |           6C 75 7E 87 |
- 3198 |  1      App.Main.s   2167 | Data        | 00 |         |   16 | 00/1DD1 : 00 0A 14 1E |                   hex        000A141E28323C46505A646E78828C96
+ 3194 |  1      App.Main.s   2172 | Data        | 00 |         |   16 | 00/1DCB : 00 0A 14 1E |                   hex        000A141E28323C46505A646E78828C96
       |                           |             |    |         |      |           28 32 3C 46 |
       |                           |             |    |         |      |           50 5A 64 6E |
       |                           |             |    |         |      |           78 82 8C 96 |
- 3199 |  1      App.Main.s   2168 | Data        | 00 |         |   16 | 00/1DE1 : 00 0B 16 21 |                   hex        000B16212C37424D58636E79848F9AA5
+ 3195 |  1      App.Main.s   2173 | Data        | 00 |         |   16 | 00/1DDB : 00 0B 16 21 |                   hex        000B16212C37424D58636E79848F9AA5
       |                           |             |    |         |      |           2C 37 42 4D |
       |                           |             |    |         |      |           58 63 6E 79 |
       |                           |             |    |         |      |           84 8F 9A A5 |
- 3200 |  1      App.Main.s   2169 | Data        | 00 |         |   16 | 00/1DF1 : 00 0C 18 24 |                   hex        000C1824303C4854606C7884909CA8B4
+ 3196 |  1      App.Main.s   2174 | Data        | 00 |         |   16 | 00/1DEB : 00 0C 18 24 |                   hex        000C1824303C4854606C7884909CA8B4
       |                           |             |    |         |      |           30 3C 48 54 |
       |                           |             |    |         |      |           60 6C 78 84 |
       |                           |             |    |         |      |           90 9C A8 B4 |
- 3201 |  1      App.Main.s   2170 | Data        | 00 |         |   16 | 00/1E01 : 00 0D 1A 27 |                   hex        000D1A2734414E5B6875828F9CA9B6C3
+ 3197 |  1      App.Main.s   2175 | Data        | 00 |         |   16 | 00/1DFB : 00 0D 1A 27 |                   hex        000D1A2734414E5B6875828F9CA9B6C3
       |                           |             |    |         |      |           34 41 4E 5B |
       |                           |             |    |         |      |           68 75 82 8F |
       |                           |             |    |         |      |           9C A9 B6 C3 |
- 3202 |  1      App.Main.s   2171 | Data        | 00 |         |   16 | 00/1E11 : 00 0E 1C 2A |                   hex        000E1C2A38465462707E8C9AA8B6C4D2
+ 3198 |  1      App.Main.s   2176 | Data        | 00 |         |   16 | 00/1E0B : 00 0E 1C 2A |                   hex        000E1C2A38465462707E8C9AA8B6C4D2
       |                           |             |    |         |      |           38 46 54 62 |
       |                           |             |    |         |      |           70 7E 8C 9A |
       |                           |             |    |         |      |           A8 B6 C4 D2 |
- 3203 |  1      App.Main.s   2172 | Data        | 00 |         |   16 | 00/1E21 : 00 0F 1E 2D |                   hex        000F1E2D3C4B5A69788796A5B4C3D2E1
+ 3199 |  1      App.Main.s   2177 | Data        | 00 |         |   16 | 00/1E1B : 00 0F 1E 2D |                   hex        000F1E2D3C4B5A69788796A5B4C3D2E1
       |                           |             |    |         |      |           3C 4B 5A 69 |
       |                           |             |    |         |      |           78 87 96 A5 |
       |                           |             |    |         |      |           B4 C3 D2 E1 |
- 3204 |  1      App.Main.s   2173 | Empty       | 00 |         |    0 | 00/1E31               |                                             
- 3205 |  1      App.Main.s   2174 | Comment     | 00 |         |    0 | 00/1E31               | ; MULTIT2 — crossed-nibble correction table (512 bytes)
- 3206 |  1      App.Main.s   2175 | Data        | 00 |         |   16 | 00/1E31 : 00 00 00 00 | MULTIT2           hex        00000000000000000000000000000000
+ 3200 |  1      App.Main.s   2178 | Empty       | 00 |         |    0 | 00/1E2B               |                                             
+ 3201 |  1      App.Main.s   2179 | Comment     | 00 |         |    0 | 00/1E2B               | ; MULTIT2 — crossed-nibble correction table (512 bytes)
+ 3202 |  1      App.Main.s   2180 | Data        | 00 |         |   16 | 00/1E2B : 00 00 00 00 | MULTIT2           hex        00000000000000000000000000000000
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
- 3207 |  1      App.Main.s   2176 | Data        | 00 |         |   16 | 00/1E41 : 00 00 00 00 |                   hex        00000000000000000000000000000000
+ 3203 |  1      App.Main.s   2181 | Data        | 00 |         |   16 | 00/1E3B : 00 00 00 00 |                   hex        00000000000000000000000000000000
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
       |                           |             |    |         |      |           00 00 00 00 |
- 3208 |  1      App.Main.s   2177 | Data        | 00 |         |   16 | 00/1E51 : 00 00 10 00 |                   hex        00001000200030004000500060007000
+ 3204 |  1      App.Main.s   2182 | Data        | 00 |         |   16 | 00/1E4B : 00 00 10 00 |                   hex        00001000200030004000500060007000
       |                           |             |    |         |      |           20 00 30 00 |
       |                           |             |    |         |      |           40 00 50 00 |
       |                           |             |    |         |      |           60 00 70 00 |
- 3209 |  1      App.Main.s   2178 | Data        | 00 |         |   16 | 00/1E61 : 80 00 90 00 |                   hex        80009000A000B000C000D000E000F000
+ 3205 |  1      App.Main.s   2183 | Data        | 00 |         |   16 | 00/1E5B : 80 00 90 00 |                   hex        80009000A000B000C000D000E000F000
       |                           |             |    |         |      |           A0 00 B0 00 |
       |                           |             |    |         |      |           C0 00 D0 00 |
       |                           |             |    |         |      |           E0 00 F0 00 |
- 3210 |  1      App.Main.s   2179 | Data        | 00 |         |   16 | 00/1E71 : 00 00 20 00 |                   hex        00002000400060008000A000C000E000
+ 3206 |  1      App.Main.s   2184 | Data        | 00 |         |   16 | 00/1E6B : 00 00 20 00 |                   hex        00002000400060008000A000C000E000
       |                           |             |    |         |      |           40 00 60 00 |
       |                           |             |    |         |      |           80 00 A0 00 |
       |                           |             |    |         |      |           C0 00 E0 00 |
- 3211 |  1      App.Main.s   2180 | Data        | 00 |         |   16 | 00/1E81 : 00 01 20 01 |                   hex        00012001400160018001A001C001E001
+ 3207 |  1      App.Main.s   2185 | Data        | 00 |         |   16 | 00/1E7B : 00 01 20 01 |                   hex        00012001400160018001A001C001E001
       |                           |             |    |         |      |           40 01 60 01 |
       |                           |             |    |         |      |           80 01 A0 01 |
       |                           |             |    |         |      |           C0 01 E0 01 |
- 3212 |  1      App.Main.s   2181 | Data        | 00 |         |   16 | 00/1E91 : 00 00 30 00 |                   hex        0000300060009000C000F00020015001
+ 3208 |  1      App.Main.s   2186 | Data        | 00 |         |   16 | 00/1E8B : 00 00 30 00 |                   hex        0000300060009000C000F00020015001
       |                           |             |    |         |      |           60 00 90 00 |
       |                           |             |    |         |      |           C0 00 F0 00 |
       |                           |             |    |         |      |           20 01 50 01 |
- 3213 |  1      App.Main.s   2182 | Data        | 00 |         |   16 | 00/1EA1 : 80 01 B0 01 |                   hex        8001B001E001100240027002A002D002
+ 3209 |  1      App.Main.s   2187 | Data        | 00 |         |   16 | 00/1E9B : 80 01 B0 01 |                   hex        8001B001E001100240027002A002D002
       |                           |             |    |         |      |           E0 01 10 02 |
       |                           |             |    |         |      |           40 02 70 02 |
       |                           |             |    |         |      |           A0 02 D0 02 |
- 3214 |  1      App.Main.s   2183 | Data        | 00 |         |   16 | 00/1EB1 : 00 00 40 00 |                   hex        000040008000C000000140018001C001
+ 3210 |  1      App.Main.s   2188 | Data        | 00 |         |   16 | 00/1EAB : 00 00 40 00 |                   hex        000040008000C000000140018001C001
       |                           |             |    |         |      |           80 00 C0 00 |
       |                           |             |    |         |      |           00 01 40 01 |
       |                           |             |    |         |      |           80 01 C0 01 |
- 3215 |  1      App.Main.s   2184 | Data        | 00 |         |   16 | 00/1EC1 : 00 02 40 02 |                   hex        000240028002C002000340038003C003
+ 3211 |  1      App.Main.s   2189 | Data        | 00 |         |   16 | 00/1EBB : 00 02 40 02 |                   hex        000240028002C002000340038003C003
       |                           |             |    |         |      |           80 02 C0 02 |
       |                           |             |    |         |      |           00 03 40 03 |
       |                           |             |    |         |      |           80 03 C0 03 |
- 3216 |  1      App.Main.s   2185 | Data        | 00 |         |   16 | 00/1ED1 : 00 00 50 00 |                   hex        00005000A000F00040019001E0013002
+ 3212 |  1      App.Main.s   2190 | Data        | 00 |         |   16 | 00/1ECB : 00 00 50 00 |                   hex        00005000A000F00040019001E0013002
       |                           |             |    |         |      |           A0 00 F0 00 |
       |                           |             |    |         |      |           40 01 90 01 |
       |                           |             |    |         |      |           E0 01 30 02 |
- 3217 |  1      App.Main.s   2186 | Data        | 00 |         |   16 | 00/1EE1 : 80 02 D0 02 |                   hex        8002D00220037003C00310046004B004
+ 3213 |  1      App.Main.s   2191 | Data        | 00 |         |   16 | 00/1EDB : 80 02 D0 02 |                   hex        8002D00220037003C00310046004B004
       |                           |             |    |         |      |           20 03 70 03 |
       |                           |             |    |         |      |           C0 03 10 04 |
       |                           |             |    |         |      |           60 04 B0 04 |
- 3218 |  1      App.Main.s   2187 | Data        | 00 |         |   16 | 00/1EF1 : 00 00 60 00 |                   hex        00006000C00020018001E0014002A002
+ 3214 |  1      App.Main.s   2192 | Data        | 00 |         |   16 | 00/1EEB : 00 00 60 00 |                   hex        00006000C00020018001E0014002A002
       |                           |             |    |         |      |           C0 00 20 01 |
       |                           |             |    |         |      |           80 01 E0 01 |
       |                           |             |    |         |      |           40 02 A0 02 |
- 3219 |  1      App.Main.s   2188 | Data        | 00 |         |   16 | 00/1F01 : 00 03 60 03 |                   hex        00036003C00320048004E0044005A005
+ 3215 |  1      App.Main.s   2193 | Data        | 00 |         |   16 | 00/1EFB : 00 03 60 03 |                   hex        00036003C00320048004E0044005A005
       |                           |             |    |         |      |           C0 03 20 04 |
       |                           |             |    |         |      |           80 04 E0 04 |
       |                           |             |    |         |      |           40 05 A0 05 |
- 3220 |  1      App.Main.s   2189 | Data        | 00 |         |   16 | 00/1F11 : 00 00 70 00 |                   hex        00007000E0005001C0013002A0021003
+ 3216 |  1      App.Main.s   2194 | Data        | 00 |         |   16 | 00/1F0B : 00 00 70 00 |                   hex        00007000E0005001C0013002A0021003
       |                           |             |    |         |      |           E0 00 50 01 |
       |                           |             |    |         |      |           C0 01 30 02 |
       |                           |             |    |         |      |           A0 02 10 03 |
- 3221 |  1      App.Main.s   2190 | Data        | 00 |         |   16 | 00/1F21 : 80 03 F0 03 |                   hex        8003F0036004D0044005B00520069006
+ 3217 |  1      App.Main.s   2195 | Data        | 00 |         |   16 | 00/1F1B : 80 03 F0 03 |                   hex        8003F0036004D0044005B00520069006
       |                           |             |    |         |      |           60 04 D0 04 |
       |                           |             |    |         |      |           40 05 B0 05 |
       |                           |             |    |         |      |           20 06 90 06 |
- 3222 |  1      App.Main.s   2191 | Data        | 00 |         |   16 | 00/1F31 : 00 00 80 00 |                   hex        00008000000180010002800200038003
+ 3218 |  1      App.Main.s   2196 | Data        | 00 |         |   16 | 00/1F2B : 00 00 80 00 |                   hex        00008000000180010002800200038003
       |                           |             |    |         |      |           00 01 80 01 |
       |                           |             |    |         |      |           00 02 80 02 |
       |                           |             |    |         |      |           00 03 80 03 |
- 3223 |  1      App.Main.s   2192 | Data        | 00 |         |   16 | 00/1F41 : 00 04 80 04 |                   hex        00048004000580050006800600078007
+ 3219 |  1      App.Main.s   2197 | Data        | 00 |         |   16 | 00/1F3B : 00 04 80 04 |                   hex        00048004000580050006800600078007
       |                           |             |    |         |      |           00 05 80 05 |
       |                           |             |    |         |      |           00 06 80 06 |
       |                           |             |    |         |      |           00 07 80 07 |
- 3224 |  1      App.Main.s   2193 | Data        | 00 |         |   16 | 00/1F51 : 00 00 90 00 |                   hex        000090002001B0014002D0026003F003
+ 3220 |  1      App.Main.s   2198 | Data        | 00 |         |   16 | 00/1F4B : 00 00 90 00 |                   hex        000090002001B0014002D0026003F003
       |                           |             |    |         |      |           20 01 B0 01 |
       |                           |             |    |         |      |           40 02 D0 02 |
       |                           |             |    |         |      |           60 03 F0 03 |
- 3225 |  1      App.Main.s   2194 | Data        | 00 |         |   16 | 00/1F61 : 80 04 10 05 |                   hex        80041005A0053006C0065007E0077008
+ 3221 |  1      App.Main.s   2199 | Data        | 00 |         |   16 | 00/1F5B : 80 04 10 05 |                   hex        80041005A0053006C0065007E0077008
       |                           |             |    |         |      |           A0 05 30 06 |
       |                           |             |    |         |      |           C0 06 50 07 |
       |                           |             |    |         |      |           E0 07 70 08 |
- 3226 |  1      App.Main.s   2195 | Data        | 00 |         |   16 | 00/1F71 : 00 00 A0 00 |                   hex        0000A0004001E00180022003C0036004
+ 3222 |  1      App.Main.s   2200 | Data        | 00 |         |   16 | 00/1F6B : 00 00 A0 00 |                   hex        0000A0004001E00180022003C0036004
       |                           |             |    |         |      |           40 01 E0 01 |
       |                           |             |    |         |      |           80 02 20 03 |
       |                           |             |    |         |      |           C0 03 60 04 |
- 3227 |  1      App.Main.s   2196 | Data        | 00 |         |   16 | 00/1F81 : 00 05 A0 05 |                   hex        0005A0054006E00680072008C0086009
+ 3223 |  1      App.Main.s   2201 | Data        | 00 |         |   16 | 00/1F7B : 00 05 A0 05 |                   hex        0005A0054006E00680072008C0086009
       |                           |             |    |         |      |           40 06 E0 06 |
       |                           |             |    |         |      |           80 07 20 08 |
       |                           |             |    |         |      |           C0 08 60 09 |
- 3228 |  1      App.Main.s   2197 | Data        | 00 |         |   16 | 00/1F91 : 00 00 B0 00 |                   hex        0000B00060011002C00270032004D004
+ 3224 |  1      App.Main.s   2202 | Data        | 00 |         |   16 | 00/1F8B : 00 00 B0 00 |                   hex        0000B00060011002C00270032004D004
       |                           |             |    |         |      |           60 01 10 02 |
       |                           |             |    |         |      |           C0 02 70 03 |
       |                           |             |    |         |      |           20 04 D0 04 |
- 3229 |  1      App.Main.s   2198 | Data        | 00 |         |   16 | 00/1FA1 : 80 05 30 06 |                   hex        80053006E00690074008F008A009500A
+ 3225 |  1      App.Main.s   2203 | Data        | 00 |         |   16 | 00/1F9B : 80 05 30 06 |                   hex        80053006E00690074008F008A009500A
       |                           |             |    |         |      |           E0 06 90 07 |
       |                           |             |    |         |      |           40 08 F0 08 |
       |                           |             |    |         |      |           A0 09 50 0A |
- 3230 |  1      App.Main.s   2199 | Data        | 00 |         |   16 | 00/1FB1 : 00 00 C0 00 |                   hex        0000C000800140020003C00380044005
+ 3226 |  1      App.Main.s   2204 | Data        | 00 |         |   16 | 00/1FAB : 00 00 C0 00 |                   hex        0000C000800140020003C00380044005
       |                           |             |    |         |      |           80 01 40 02 |
       |                           |             |    |         |      |           00 03 C0 03 |
       |                           |             |    |         |      |           80 04 40 05 |
- 3231 |  1      App.Main.s   2200 | Data        | 00 |         |   16 | 00/1FC1 : 00 06 C0 06 |                   hex        0006C006800740080009C009800A400B
+ 3227 |  1      App.Main.s   2205 | Data        | 00 |         |   16 | 00/1FBB : 00 06 C0 06 |                   hex        0006C006800740080009C009800A400B
       |                           |             |    |         |      |           80 07 40 08 |
       |                           |             |    |         |      |           00 09 C0 09 |
       |                           |             |    |         |      |           80 0A 40 0B |
- 3232 |  1      App.Main.s   2201 | Data        | 00 |         |   16 | 00/1FD1 : 00 00 D0 00 |                   hex        0000D000A001700240031004E004B005
+ 3228 |  1      App.Main.s   2206 | Data        | 00 |         |   16 | 00/1FCB : 00 00 D0 00 |                   hex        0000D000A001700240031004E004B005
       |                           |             |    |         |      |           A0 01 70 02 |
       |                           |             |    |         |      |           40 03 10 04 |
       |                           |             |    |         |      |           E0 04 B0 05 |
- 3233 |  1      App.Main.s   2202 | Data        | 00 |         |   16 | 00/1FE1 : 80 06 50 07 |                   hex        800650072008F008C009900A600B300C
+ 3229 |  1      App.Main.s   2207 | Data        | 00 |         |   16 | 00/1FDB : 80 06 50 07 |                   hex        800650072008F008C009900A600B300C
       |                           |             |    |         |      |           20 08 F0 08 |
       |                           |             |    |         |      |           C0 09 90 0A |
       |                           |             |    |         |      |           60 0B 30 0C |
- 3234 |  1      App.Main.s   2203 | Data        | 00 |         |   16 | 00/1FF1 : 00 00 E0 00 |                   hex        0000E000C001A0028003600440052006
+ 3230 |  1      App.Main.s   2208 | Data        | 00 |         |   16 | 00/1FEB : 00 00 E0 00 |                   hex        0000E000C001A0028003600440052006
       |                           |             |    |         |      |           C0 01 A0 02 |
       |                           |             |    |         |      |           80 03 60 04 |
       |                           |             |    |         |      |           40 05 20 06 |
- 3235 |  1      App.Main.s   2204 | Data        | 00 |         |   16 | 00/2001 : 00 07 E0 07 |                   hex        0007E007C008A009800A600B400C200D
+ 3231 |  1      App.Main.s   2209 | Data        | 00 |         |   16 | 00/1FFB : 00 07 E0 07 |                   hex        0007E007C008A009800A600B400C200D
       |                           |             |    |         |      |           C0 08 A0 09 |
       |                           |             |    |         |      |           80 0A 60 0B |
       |                           |             |    |         |      |           40 0C 20 0D |
- 3236 |  1      App.Main.s   2205 | Data        | 00 |         |   16 | 00/2011 : 00 00 F0 00 |                   hex        0000F000E001D002C003B004A0059006
+ 3232 |  1      App.Main.s   2210 | Data        | 00 |         |   16 | 00/200B : 00 00 F0 00 |                   hex        0000F000E001D002C003B004A0059006
       |                           |             |    |         |      |           E0 01 D0 02 |
       |                           |             |    |         |      |           C0 03 B0 04 |
       |                           |             |    |         |      |           A0 05 90 06 |
- 3237 |  1      App.Main.s   2206 | Data        | 00 |         |   16 | 00/2021 : 80 07 70 08 |                   hex        800770086009500A400B300C200D100E
+ 3233 |  1      App.Main.s   2211 | Data        | 00 |         |   16 | 00/201B : 80 07 70 08 |                   hex        800770086009500A400B300C200D100E
       |                           |             |    |         |      |           60 09 50 0A |
       |                           |             |    |         |      |           40 0B 30 0C |
       |                           |             |    |         |      |           20 0D 10 0E |
- 3238 |  1      App.Main.s   2207 | Empty       | 00 |         |    0 | 00/2031               |                                             
- 3239 |  1      App.Main.s   2208 | Comment     | 00 |         |    0 | 00/2031               | ; =====================================================================
- 3240 |  1      App.Main.s   2209 | Comment     | 00 |         |    0 | 00/2031               | ; Quit record / app state
- 3241 |  1      App.Main.s   2210 | Comment     | 00 |         |    0 | 00/2031               | ; =====================================================================
- 3242 |  1      App.Main.s   2211 | Data        | 00 |         |    4 | 00/2031 : 00 00 00 00 | qtRec             adrl       $0000          
- 3243 |  1      App.Main.s   2212 | Data        | 00 |         |    2 | 00/2035 : 00 00       | MyDirectPage      ds         2              
- 3244 |  1      App.Main.s   2213 | Data        | 00 |         |    2 | 00/2037 : 00 00       | MyUserId          ds         2              
- 3245 |  1      App.Main.s   2214 | Empty       | 00 |         |    0 | 00/2039               |                                             
+ 3234 |  1      App.Main.s   2212 | Empty       | 00 |         |    0 | 00/202B               |                                             
+ 3235 |  1      App.Main.s   2213 | Comment     | 00 |         |    0 | 00/202B               | ; =====================================================================
+ 3236 |  1      App.Main.s   2214 | Comment     | 00 |         |    0 | 00/202B               | ; Quit record / app state
+ 3237 |  1      App.Main.s   2215 | Comment     | 00 |         |    0 | 00/202B               | ; =====================================================================
+ 3238 |  1      App.Main.s   2216 | Data        | 00 |         |    4 | 00/202B : 00 00 00 00 | qtRec             adrl       $0000          
+ 3239 |  1      App.Main.s   2217 | Data        | 00 |         |    2 | 00/202F : 00 00       | MyDirectPage      ds         2              
+ 3240 |  1      App.Main.s   2218 | Data        | 00 |         |    2 | 00/2031 : 00 00       | MyUserId          ds         2              
+ 3241 |  1      App.Main.s   2219 | Empty       | 00 |         |    0 | 00/2033               |                                             
 ------+---------------------------+-------------+----+---------+------+-----------------------+----------------------------------------------------------------------

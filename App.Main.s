@@ -2035,22 +2035,27 @@ Table_Vitesse
 ; Read from horizon downward (row 137→27). Each byte = palette number.
 ; Matches FTA's SPACE.S: palettes 4-15 create blue gradient.
 Table_Ciel
-            ds    5,4                ; 5 rows of palette 4  (darkest)
-            ds    4,5
-            ds    3,6
-]_A         =     7
-            lup   9
-            ds    6,]_A
-]_A         =     ]_A+1
-            --^
-            ds    3,]_A-1
-]_A         =     ]_A-1
-            lup   8
-]_A         =     ]_A-1
-            ds    6,]_A
-            --^
-            ds    6,5
-            ds    3,4                ; near top: back to dark
+            ds    2,6                ; near horizon: medium blue
+            ds    3,7
+            ds    4,8
+            ds    5,9
+            ds    6,10
+            ds    6,11
+            ds    7,12
+            ds    7,13
+            ds    8,14
+            ds    8,15               ; peak brightness
+            ds    8,14
+            ds    7,13
+            ds    7,12
+            ds    6,11
+            ds    6,10
+            ds    5,9
+            ds    5,8
+            ds    5,7
+            ds    5,6
+            ds    5,5
+            ds    5,4                ; top: darkest
 
 ; =====================================================================
 ; Object array — MAX_OBJECTS slots × OBJ_SIZE bytes
