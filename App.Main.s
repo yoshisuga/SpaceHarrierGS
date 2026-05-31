@@ -177,6 +177,9 @@ Taille          equ  16
             ; Move objects closer, spawn new ones
             jsr    Shape_Action
 
+            ; Check for shooting
+            jsr    Tir_Action
+
             ; Lateral ground scroll based on Harrier's X position
             ; FTA: Table_Vitesse[COL] gives speed -3..+3
             ; Mouse: HarrierCol 0-127, /2 → index 0-63
@@ -693,7 +696,7 @@ Coordonnee_Y da    0
 ; =====================================================================
 HandleInput
             stz    QuitFlag
-            jsr    READ_MOUSE
+            jsr    READ_MOUSE      ; TEMP: skip mouse to test keyboard
 
             ; Check ESC key
             sep    #$20
@@ -702,8 +705,14 @@ HandleInput
             and    #$7F
             stal   KBD_STROBE
             cmp    #$1B              ; ESC
+            beq    :doEsc
+            cmp    #$20              ; spacebar
             bne    :noKey
             rep    #$20
+            lda    #1
+            sta    FireFlag
+            bra    :noKey
+:doEsc      rep    #$20
             lda    #1
             sta    QuitFlag
             rts
@@ -796,6 +805,7 @@ READ_MOUSE
             rts
 
 MouseTmp    ds    2                  ; temp for sign-extension
+FireFlag    ds    2                  ; 1 = fire requested (spacebar)
 
 ; =====================================================================
 ; Object System Constants
@@ -807,6 +817,9 @@ S_Coor_Hori  equ  0          ; horizontal world coordinate (16-bit)
 S_Profondeur equ  2          ; depth 0-15, $FFFF=inactive
 S_Nature     equ  4          ; 0=tree, 1=pierre, 2=buisson
 S_Altitude   equ  6          ; vertical altitude (0=ground)
+
+BULLET_START  equ  12         ; slots 12-15 reserved for bullets
+BULLET_NATURE equ  $81        ; FTA's bullet nature code
 
 ; =====================================================================
 ; InitObjects — mark all object slots inactive
@@ -864,8 +877,82 @@ Shape_Action
             clc
             adc    #OBJ_SIZE
             tax
-            cpx    #MAX_OBJECTS*OBJ_SIZE
+            cpx    #BULLET_START*OBJ_SIZE
             bcc    :saLoop
+
+            ; --- Bullet slots (12-15): move toward horizon ---
+:saLoop2    lda    ObjArray+S_Profondeur,x
+            bmi    :saNext2        ; inactive
+            inc                     ; bullet moves away from player
+            cmp    #11             ; past max depth?
+            bcc    :saStore2
+            lda    #$FFFF          ; deactivate
+:saStore2   sta    ObjArray+S_Profondeur,x
+:saNext2    txa
+            clc
+            adc    #OBJ_SIZE
+            tax
+            cpx    #MAX_OBJECTS*OBJ_SIZE
+            bcc    :saLoop2
+            rts
+
+; =====================================================================
+; Tir_Action — spawn bullet when spacebar pressed
+; =====================================================================
+Tir_Action
+            rep    #$30
+            lda    FireFlag
+            beq    :noFire
+            stz    FireFlag
+
+            ; Find a free bullet slot (12-15)
+            ldx    #BULLET_START*OBJ_SIZE
+:findSlot   lda    ObjArray+S_Profondeur,x
+            bmi    :fireOk           ; $FFFF = free
+            txa
+            clc
+            adc    #OBJ_SIZE
+            tax
+            cpx    #MAX_OBJECTS*OBJ_SIZE
+            bcc    :findSlot
+:noFire     rts                      ; all slots full or no fire
+
+:fireOk     stz    ObjArray+S_Profondeur,x ; depth 0 (foreground)
+            lda    #BULLET_NATURE
+            sta    ObjArray+S_Nature,x
+            ; Altitude: pixels above ground, scaled for /32 in Print_Shape
+            ; ground_row at depth 0 ≈ Ligne_Damier + 26
+            ; raw = ground_row - HarrierRow, then *3/4 to compensate *40/32
+            lda    Ligne_Damier
+            clc
+            adc    #26
+            sec
+            sbc    HarrierRow
+            and    #$FF
+            pha                       ; save raw
+            lsr
+            lsr                       ; raw/4
+            sta    ObjArray+S_Altitude,x ; temp
+            pla                       ; raw
+            sec
+            sbc    ObjArray+S_Altitude,x ; raw - raw/4 = raw*3/4
+            sta    ObjArray+S_Altitude,x
+            ; Horizontal: convert screen delta to world coords
+            ; Projection multiplies by 2.5 at depth 0, so divide by ~2
+            lda    HarrierCol
+            and    #$FF
+            sec
+            sbc    #$40              ; signed screen delta from center
+            cmp    #$8000
+            ror                       ; arithmetic shift right = signed /2
+            clc
+            adc    Coordonnee_X
+            sta    ObjArray+S_Coor_Hori,x
+            ; DEBUG: flash border green to confirm bullet spawned
+            sep    #$20
+            lda    #$0C
+            stal   $E0C034
+            rep    #$20
             rts
 
 ; =====================================================================
@@ -889,6 +976,8 @@ Print_Shape
             beq    :psTree
             cmp    #2
             beq    :psBush
+            cmp    #BULLET_NATURE
+            beq    :psBullet
             brl    :psSkip           ; skip unknown natures
 
 :psTree     lda    ObjArray+S_Profondeur,x
@@ -902,6 +991,14 @@ Print_Shape
             BCSL   :psSkip
             clc
             adc    #78               ; bush entries: 78-91
+            sta    _Nbr_Shape
+            bra    :psProject
+
+:psBullet   lda    ObjArray+S_Profondeur,x
+            cmp    #11               ; bullet depths 0-10
+            BCSL   :psSkip
+            clc
+            adc    #51               ; bullet entries: 51-61
             sta    _Nbr_Shape
 
 :psProject  ; === Horizontal projection ===
@@ -941,8 +1038,31 @@ Print_Shape
 :psColOk
             sta    _Colonne_Shape
 
+            ; === Altitude offset (16-bit, before entering 8-bit section) ===
+            ; alt_pixels = altitude * Decalage_Y[depth] / 32
+            ldx    _Exploreur
+            lda    ObjArray+S_Altitude,x
+            and    #$00FF
+            beq    :zeroAlt
+            sep    #$30
+            pha                    ; 8-bit altitude
+            ldx    _Profondeur
+            lda    Decalage_Y,x
+            tay
+            pla
+            jsr    MULTI          ; A(8) × Y(8) → A(16)
+            mx     %00
+            lsr
+            lsr
+            lsr
+            lsr
+            lsr                    ; /32
+            bra    :storeAlt
+:zeroAlt    lda    #0
+:storeAlt   sta    _altOffset
+
             ; === Vertical projection ===
-            ; row = Ligne_Damier + Decalage_Y[depth] - Shape_Hauteur[shape]
+            ; row = Ligne_Damier + Decalage_Y[depth] - Shape_Hauteur[shape] - altOffset
             sep    #$30            ; 8-bit A,X,Y
             ldx    _Profondeur
             lda    Decalage_Y,x    ; rows below horizon for this depth
@@ -951,6 +1071,8 @@ Print_Shape
             ldx    _Nbr_Shape
             sec
             sbc    Shape_Hauteur,x ; subtract sprite height → top row
+            sec
+            sbc    _altOffset      ; subtract altitude (lifts airborne objects)
             ; Row bounds check
             cmp    #200
             bcs    :psSkip8        ; skip if row >= 200 (unsigned wraps too)
@@ -1052,6 +1174,7 @@ _Exploreur  ds     2
 _Nbr_Shape  ds     2
 _horiDelta  ds     2
 _Colonne_Shape ds  2
+_altOffset  ds  2
 
 ; =====================================================================
 ; SetupLoadPalette — minimal palette for load indicator bar
