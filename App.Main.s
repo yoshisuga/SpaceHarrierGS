@@ -770,8 +770,14 @@ READ_MOUSE
             sep    #$30              ; 8-bit for Y delta read
             ldal   Mouse_Data        ; read delta Y + button in bit 7
             sta    MouseTmp          ; save raw byte
-            rep    #$30              ; 16-bit for accumulation
-            lda    MouseTmp
+            and    #$80              ; isolate button bit (0=pressed)
+            bne    :noBtn            ; bit 7 set = NOT pressed
+            rep    #$30
+            lda    #1
+            sta    FireFlag
+            bra    :gotBtn
+:noBtn      rep    #$30
+:gotBtn     lda    MouseTmp
             and    #$007F            ; mask to 7 bits (strip button)
             bit    #$0040            ; test sign (bit 6)
             beq    :addY
