@@ -546,28 +546,26 @@ TSBScreen
 ; =====================================================================
 ; UpdateHorizon — map Harrier's Y position to horizon row (Ligne_Damier)
 ;
-; HarrierRow 0 (top) → Ligne_Damier 130 (horizon high, less sky)
-; HarrierRow 184 (bottom) → Ligne_Damier 140 (horizon low, more sky)
-; Matches FTA's concept: moving the character down makes you "look up".
-; Range 130-140 keeps checker within SHR bounds (140+60=200).
+; HarrierRow 0 (top) → Ligne_Damier 110 (horizon high, lots of ground)
+; HarrierRow 184 (bottom) → Ligne_Damier 139 (horizon low, lots of sky)
+; Range 110-139 keeps checker within SHR bounds (139+60=199).
 ; =====================================================================
 UpdateHorizon
             lda    HarrierRow
             lsr
             lsr
-            lsr
-            lsr                       ; /16 → 0..11
+            lsr                       ; /8 → 0..23
             clc
-            adc    #130
-            cmp    #141
+            adc    #110
+            cmp    #140
             bcc    :ok
-            lda    #140
+            lda    #139
 :ok         sta    Ligne_Damier
             rts
 
 ; =====================================================================
 ; SetupSkySCB — assign sky gradient palettes per row (per-frame)
-; Reads Table_Ciel from horizon upward to row $1B.
+; Reads Table_Ciel from horizon upward to row 0.
 ; =====================================================================
 SetupSkySCB
             sep    #$20
@@ -575,11 +573,11 @@ SetupSkySCB
             ldy    #0
 :skyloop    lda    Table_Ciel,y
             stal   SHR_SCB,x
-            iny
             dex
-            cpx    #$1B               ; stop at row 27 (HUD area)
-            bne    :skyloop
-            rep    #$20
+            bmi    :skyDone           ; went past row 0
+            iny
+            bra    :skyloop
+:skyDone    rep    #$20
             rts
 
 ; =====================================================================
@@ -2056,6 +2054,7 @@ Table_Ciel
             ds    5,6
             ds    5,5
             ds    5,4                ; top: darkest
+            ds    28,4               ; padding to cover max 140 sky rows
 
 ; =====================================================================
 ; Object array — MAX_OBJECTS slots × OBJ_SIZE bytes
