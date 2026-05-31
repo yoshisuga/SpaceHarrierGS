@@ -121,6 +121,7 @@ Taille          equ  16
             stz    FrameTimer
             stz    QuitFlag
             jsr    InitObjects
+            jsr    INIT_MOUSE
 
             ; One-time clear of SHR screen so sky pixels are color 0
             jsr    ClearScreen
@@ -178,9 +179,9 @@ Taille          equ  16
 
             ; Lateral ground scroll based on Harrier's X position
             ; FTA: Table_Vitesse[COL] gives speed -3..+3
-            ; COL maps to HarrierCol/2 (our range 0-143 → index 0-71)
+            ; Mouse: HarrierCol 0-127, /2 → index 0-63
             lda    HarrierCol
-            lsr                       ; /2 to match FTA's COL range
+            lsr                       ; /2 → index into Table_Vitesse
             tax
             sep    #$20
             lda    Table_Vitesse,x
@@ -546,17 +547,21 @@ TSBScreen
 ; =====================================================================
 ; UpdateHorizon — map Harrier's Y position to horizon row (Ligne_Damier)
 ;
-; HarrierRow 0 (top) → Ligne_Damier 110 (horizon high, lots of ground)
-; HarrierRow 184 (bottom) → Ligne_Damier 139 (horizon low, lots of sky)
-; Range 110-139 keeps checker within SHR bounds (139+60=199).
+; FTA uses Ligne_Damier 137-153 (Table_Lgn). We use 137-139.
+; At 137, ground = rows 137-196 (only 3 rows uncovered at bottom).
+; At 139, ground = rows 139-198 (1 row uncovered).
+; HarrierRow 0-183, /64 → 0-2, +137 = 137-139.
 ; =====================================================================
 UpdateHorizon
             lda    HarrierRow
             lsr
             lsr
-            lsr                       ; /8 → 0..23
+            lsr
+            lsr
+            lsr
+            lsr                       ; /64 → 0..2
             clc
-            adc    #110
+            adc    #137
             cmp    #140
             bcc    :ok
             lda    #139
@@ -681,73 +686,116 @@ _PNT2       ds     1
 Coordonnee_Y da    0
 
 ; =====================================================================
-; HandleInput — read keyboard, move Harrier, set QuitFlag
+; HandleInput — read mouse + check ESC key
 ; =====================================================================
-; Apple IIgs keyboard: only one key at a time via $C000/$C010.
-; Arrow keys: left=$08, right=$15, up=$0B, down=$0A
+; Mouse sets HarrierCol/HarrierRow directly (analog position).
+; ESC key still quits.
 ; =====================================================================
 HandleInput
             stz    QuitFlag
-            sep    #$20
-            mx     %10
-            ldal   KBD_DATA
-            bpl    :done             ; no key pressed
-            and    #$7F
-            stal   KBD_STROBE        ; acknowledge keypress
+            jsr    READ_MOUSE
 
+            ; Check ESC key
+            sep    #$20
+            ldal   KBD_DATA
+            bpl    :noKey
+            and    #$7F
+            stal   KBD_STROBE
             cmp    #$1B              ; ESC
-            bne    :notEsc
+            bne    :noKey
             rep    #$20
-            mx     %00
             lda    #1
             sta    QuitFlag
             rts
-:notEsc
-            rep    #$20
-            mx     %00
-            and    #$00FF
-
-            cmp    #$08              ; left arrow
-            bne    :notLeft
-            lda    HarrierCol
-            sec
-            sbc    #4
-            bmi    :done2
-            sta    HarrierCol
-            bra    :done2
-:notLeft
-            cmp    #$15              ; right arrow
-            bne    :notRight
-            lda    HarrierCol
-            clc
-            adc    #4
-            cmp    #144              ; 160 - ~16 pixels for sprite width
-            bcs    :done2
-            sta    HarrierCol
-            bra    :done2
-:notRight
-            cmp    #$0B              ; up arrow
-            bne    :notUp
-            lda    HarrierRow
-            sec
-            sbc    #4
-            bmi    :done2
-            sta    HarrierRow
-            bra    :done2
-:notUp
-            cmp    #$0A              ; down arrow
-            bne    :done2
-            lda    HarrierRow
-            clc
-            adc    #4
-            cmp    #184              ; don't go off bottom
-            bcs    :done2
-            sta    HarrierRow
-:done2      rts
-:done
-            rep    #$20
-            mx     %00
+:noKey      rep    #$20
             rts
+
+; =====================================================================
+; Mouse driver — ADB mouse via softswitches (from FTA's MOUSE2.S)
+; Reads delta X/Y from $E1C024, accumulates into HarrierCol/HarrierRow.
+; =====================================================================
+Status_Reg  equ   $E1C027
+Mouse_Data  equ   $E1C024
+
+Mouse_Xmin  equ   0
+Mouse_Xmax  equ   128               ; play area is 128 bytes wide
+Mouse_Ymin  equ   0
+Mouse_Ymax  equ   184
+
+INIT_MOUSE
+            rep    #$30
+            lda    #60
+            sta    HarrierCol
+            lda    #140
+            sta    HarrierRow
+            jsr    READ_MOUSE        ; flush any pending data
+            rep    #$30
+            lda    #60
+            sta    HarrierCol
+            lda    #140
+            sta    HarrierRow
+            rts
+
+READ_MOUSE
+            sep    #$30              ; 8-bit A, X, Y
+            ldal   Status_Reg
+            bpl    :noData           ; bit 7=0: no data available
+            and    #%00000010        ; bit 1: Y data (0=X data ready)
+            beq    :xReady
+            ldal   Mouse_Data        ; discard Y-only read
+:noData     rep    #$30              ; return in 16-bit mode
+            rts
+
+:xReady     ldal   Mouse_Data        ; 8-bit: read delta X (7-bit + sign in bit 6)
+            sta    MouseTmp          ; save raw byte
+            rep    #$30              ; 16-bit for accumulation
+            lda    MouseTmp          ; load into 16-bit A (high byte=0)
+            and    #$007F            ; mask to 7 bits
+            bit    #$0040            ; test sign (bit 6)
+            beq    :addX
+            ora    #$FF80            ; sign-extend negative
+:addX       clc
+            adc    HarrierCol
+            sta    HarrierCol
+
+            sep    #$30              ; 8-bit for Y delta read
+            ldal   Mouse_Data        ; read delta Y + button in bit 7
+            sta    MouseTmp          ; save raw byte
+            rep    #$30              ; 16-bit for accumulation
+            lda    MouseTmp
+            and    #$007F            ; mask to 7 bits (strip button)
+            bit    #$0040            ; test sign (bit 6)
+            beq    :addY
+            ora    #$FF80            ; sign-extend negative
+:addY       clc
+            adc    HarrierRow
+            sta    HarrierRow
+
+            ; Clamp X to 0..Mouse_Xmax-1
+            lda    HarrierCol
+            bmi    :clampXmin
+            cmp    #Mouse_Xmax
+            bcc    :xOk
+            lda    #Mouse_Xmax-1
+            sta    HarrierCol
+            bra    :xOk
+:clampXmin  lda    #Mouse_Xmin
+            sta    HarrierCol
+:xOk
+            ; Clamp Y to 0..Mouse_Ymax-1
+            lda    HarrierRow
+            bmi    :clampYmin
+            cmp    #Mouse_Ymax
+            bcc    :yOk
+            lda    #Mouse_Ymax-1
+            sta    HarrierRow
+            bra    :yOk
+:clampYmin  lda    #Mouse_Ymin
+            sta    HarrierRow
+:yOk
+            rts
+
+MouseTmp    ds    2                  ; temp for sign-extension
 
 ; =====================================================================
 ; Object System Constants
@@ -2018,16 +2066,15 @@ Coordonnee_X da   0                 ; horizontal scroll position
 V_X          ds   2                  ; lateral scroll velocity (signed)
 
 ; Table_Vitesse — lateral scroll speed from Harrier X position
-; FTA: 113 entries, speed -3 to +3. Center = no scroll.
-; Our HarrierCol/2 gives index 0-71, so we need ~72 entries.
+; Mouse: HarrierCol/2 → index 0-63. 64 entries.
 Table_Vitesse
-            ds    5,$FD               ; far left: speed -3
-            ds    5,$FE               ; speed -2
-            ds    5,$FF               ; speed -1
-            ds    42,$00              ; center: no scroll (wide dead zone)
-            ds    5,$01               ; speed +1
-            ds    5,$02               ; speed +2
-            ds    5,$03               ; far right: speed +3
+            ds    4,$FD               ; far left: speed -3
+            ds    4,$FE               ; speed -2
+            ds    4,$FF               ; speed -1
+            ds    40,$00              ; center: no scroll (wide dead zone)
+            ds    4,$01               ; speed +1
+            ds    4,$02               ; speed +2
+            ds    4,$03               ; far right: speed +3
 
 ; Table_Ciel — sky gradient palette assignments per row
 ; Read from horizon downward (row 137→27). Each byte = palette number.
