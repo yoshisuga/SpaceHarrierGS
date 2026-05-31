@@ -15,7 +15,7 @@
 
 ; === Hardware registers ===
 NEW_VIDEO_REG equ  $E0C029
-SHADOW_REG    equ  $E0C035
+SHADOW_REG    equ  $E1C035
 STATEREG      equ  $E0C068  ; State Register: bit5=RAMRD, bit4=RAMWRT
 KBD_DATA      equ  $E0C000
 KBD_STROBE    equ  $E0C010
@@ -163,13 +163,7 @@ Taille          equ  16
 ; =====================================================================
 
 :gameloop
-            ; DIAG: border red = start of frame
-            sep    #$20
-            lda    #$01
-            stal   $E0C034
-            rep    #$20
-
-            jsr    WaitVBL
+            ; --- Game logic (doesn't touch screen) ---
 
             ; Poll keyboard — movement + ESC
             jsr    HandleInput
@@ -178,12 +172,6 @@ Taille          equ  16
 
             ; Update horizon from Harrier's vertical position
             jsr    UpdateHorizon
-
-            ; DIAG: border green = before Shape_Action
-            sep    #$20
-            lda    #$0C
-            stal   $E0C034
-            rep    #$20
 
             ; Move objects closer, spawn new ones
             jsr    Shape_Action
@@ -216,7 +204,15 @@ Taille          equ  16
 :yok        sta    Coordonnee_Y
             rep    #$20
 
-            ; Clear play area (sky + ground, 128 bytes per row)
+            ; --- Inhibit SHR shadowing ---
+            ; All writes to aux RAM are invisible to the display.
+            ; Display freezes on the previous frame's content.
+            sep    #$20
+            lda    #$1C              ; bits 2,3,4 = inhibit all SHR shadow regions
+            stal   $E1C035
+            rep    #$20
+
+            ; Clear play area (invisible — shadow inhibited)
             jsr    ClearScreen
 
             ; Set up SCBs: checker palette banding + sky gradient
@@ -280,20 +276,8 @@ Taille          equ  16
             phk
             plb
 
-            ; DIAG: border blue = before Print_Shape
-            sep    #$20
-            lda    #$03
-            stal   $E0C034
-            rep    #$20
-
             ; Draw world objects (trees etc.) depth-sorted
             jsr    Print_Shape
-
-            ; DIAG: border white = before Harrier draw
-            sep    #$20
-            lda    #$0F
-            stal   $E0C034
-            rep    #$20
 
             ; Draw Harrier at current position
             lda    HarrierRow
@@ -307,6 +291,18 @@ Taille          equ  16
             ; Self-modifying JSL — patched with correct frame address
             jsl    TABLE_ROUT+4       ; operand patched below
 _DrawMan    equ    *-3                ; points to the 3-byte JSL operand
+
+            ; --- Re-enable shadowing + TSB pass ---
+            ; Re-enable SHR shadowing, then "touch" every byte in the play
+            ; area to force the shadow copy from aux RAM → display ($E1).
+            ; TSB dp with A=0 reads each byte and writes it back unchanged;
+            ; the write triggers the hardware shadow copy.
+            jsr    WaitVBL            ; sync before revealing new frame
+            sep    #$20
+            lda    #$00
+            stal   $E1C035            ; re-enable shadowing
+            rep    #$20
+            jsr    TSBScreen          ; copy aux → display
 
             ; Animate: cycle Man frames 0-7 (running)
             lda    FrameTimer
@@ -333,12 +329,6 @@ _DrawMan    equ    *-3                ; points to the 3-byte JSL operand
             sep    #$20
             lda    #^TABLE_ROUT
             sta    _DrawMan+2
-            rep    #$20
-
-            ; DIAG: border yellow = end of frame (loop back)
-            sep    #$20
-            lda    #$0E
-            stal   $E0C034
             rep    #$20
 
             jmp    :gameloop
@@ -446,6 +436,104 @@ ClearScreen
             brl    :row
 :clrDone
 
+            lda    #0
+            tcd                       ; restore DP = 0
+            ldal   $E1C068
+            and    #$FFCF            ; disable RAMRD+RAMWRT
+            stal   $E1C068
+            rts
+
+; =====================================================================
+; TSBScreen — force shadow copy of play area (aux RAM → $E1 display)
+;
+; Uses TSB dp with A=0 to read-modify-write every byte in the play area.
+; With shadowing enabled, each write triggers the hardware copy to $E1.
+; This makes the frame visible on the display.
+; =====================================================================
+TSBScreen
+            ldal   $E1C068
+            ora    #$30               ; enable RAMRD+RAMWRT
+            stal   $E1C068
+
+            lda    #$2000             ; SHR screen base
+            tcd
+            lda    #0                 ; A=0: TSB won't change data
+            ldx    #200               ; all 200 rows
+
+:trow       tsb    $00
+            tsb    $02
+            tsb    $04
+            tsb    $06
+            tsb    $08
+            tsb    $0A
+            tsb    $0C
+            tsb    $0E
+            tsb    $10
+            tsb    $12
+            tsb    $14
+            tsb    $16
+            tsb    $18
+            tsb    $1A
+            tsb    $1C
+            tsb    $1E
+            tsb    $20
+            tsb    $22
+            tsb    $24
+            tsb    $26
+            tsb    $28
+            tsb    $2A
+            tsb    $2C
+            tsb    $2E
+            tsb    $30
+            tsb    $32
+            tsb    $34
+            tsb    $36
+            tsb    $38
+            tsb    $3A
+            tsb    $3C
+            tsb    $3E
+            tsb    $40
+            tsb    $42
+            tsb    $44
+            tsb    $46
+            tsb    $48
+            tsb    $4A
+            tsb    $4C
+            tsb    $4E
+            tsb    $50
+            tsb    $52
+            tsb    $54
+            tsb    $56
+            tsb    $58
+            tsb    $5A
+            tsb    $5C
+            tsb    $5E
+            tsb    $60
+            tsb    $62
+            tsb    $64
+            tsb    $66
+            tsb    $68
+            tsb    $6A
+            tsb    $6C
+            tsb    $6E
+            tsb    $70
+            tsb    $72
+            tsb    $74
+            tsb    $76
+            tsb    $78
+            tsb    $7A
+            tsb    $7C
+            tsb    $7E               ; 64 TSB = 128 bytes = play area only
+            ; advance to next row
+            tdc
+            clc
+            adc    #$A0
+            tcd
+            lda    #0                 ; reset A for next row
+            dex
+            beq    :tsbDone
+            brl    :trow
+:tsbDone
             lda    #0
             tcd                       ; restore DP = 0
             ldal   $E1C068
@@ -706,10 +794,13 @@ Shape_Action
             and    #$FF
             cmp    #$FC            ; ~1.5% chance to spawn per slot
             bcc    :saNext
-            ; Spawn a tree at the horizon
+            ; Spawn at the horizon
             lda    #15
             sta    ObjArray+S_Profondeur,x
-            lda    #0              ; nature = tree
+            ; Random nature: tree (0) or bush (2)
+            jsr    ALEA
+            and    #$01              ; 0 or 1
+            asl                       ; 0 or 2
             sta    ObjArray+S_Nature,x
             stz    ObjArray+S_Altitude,x ; on the ground
             ; Random horizontal position: ±128 around view center
@@ -745,17 +836,27 @@ Print_Shape
             ; This object is at the current depth — render it
             stx    _Exploreur
 
-            ; Only trees for now
+            ; Determine shape number from nature + depth
             lda    ObjArray+S_Nature,x
-            bne    :psSkip         ; skip non-trees
+            beq    :psTree
+            cmp    #2
+            beq    :psBush
+            brl    :psSkip           ; skip unknown natures
 
-            ; Shape number = depth + 24 (tree TABLE_ROUT entries)
-            lda    ObjArray+S_Profondeur,x
+:psTree     lda    ObjArray+S_Profondeur,x
             clc
-            adc    #24
+            adc    #24               ; tree entries: 24-39
+            sta    _Nbr_Shape
+            bra    :psProject
+
+:psBush     lda    ObjArray+S_Profondeur,x
+            cmp    #14               ; bushes only at depths 0-13
+            BCSL   :psSkip
+            clc
+            adc    #78               ; bush entries: 78-91
             sta    _Nbr_Shape
 
-            ; === Horizontal projection ===
+:psProject  ; === Horizontal projection ===
             ; screen_col = |delta| * Decalage_Y[depth] / 16, signed, + $40
             lda    ObjArray+S_Coor_Hori,x
             sec
@@ -783,9 +884,13 @@ Print_Shape
             inc                    ; negate
 :psPos      clc
             adc    #$40            ; center on screen
-            ; Bounds check: column must be 0-$6F (leaves room for sprite width)
-            cmp    #$70
-            bcs    :psSkip
+            ; Bounds check (matches FTA):
+            ; Accept $FFE0-$FFFF (partial left edge) and $0000-$007F
+            cmp    #$FFE0            ; col >= -32?
+            bcs    :psColOk          ; yes — accept (left-edge partial)
+            cmp    #$80              ; col >= $80?
+            bcs    :psSkip           ; yes — off right / in sidebar
+:psColOk
             sta    _Colonne_Shape
 
             ; === Vertical projection ===
