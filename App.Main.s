@@ -821,11 +821,14 @@ MAX_OBJECTS  equ  16         ; max simultaneous objects
 ; Object field offsets within each slot
 S_Coor_Hori  equ  0          ; horizontal world coordinate (16-bit)
 S_Profondeur equ  2          ; depth 0-15, $FFFF=inactive
-S_Nature     equ  4          ; 0=tree, 1=pierre, 2=buisson
+S_Nature     equ  4          ; 0=tree, 1=pierre, 2=buisson, $83=ship
 S_Altitude   equ  6          ; vertical altitude (0=ground)
 
-BULLET_START  equ  12         ; slots 12-15 reserved for bullets
+SCENERY_END   equ  8          ; slots 0-7: scenery (tree/rock/bush)
+ENEMY_START   equ  8          ; slots 8-11: enemies (ship/trident)
+BULLET_START  equ  12         ; slots 12-15: bullets
 BULLET_NATURE equ  $81        ; FTA's bullet nature code
+SHIP_NATURE   equ  $83        ; FTA's ship nature code
 
 ; =====================================================================
 ; InitObjects — mark all object slots inactive
@@ -899,8 +902,55 @@ Shape_Action
             clc
             adc    #OBJ_SIZE
             tax
-            cpx    #BULLET_START*OBJ_SIZE
+            cpx    #SCENERY_END*OBJ_SIZE
             bcc    :saLoop
+
+            ; --- Enemy slots (8-11): ships fly toward player ---
+:enLoop     lda    ObjArray+S_Profondeur,x
+            bmi    :enTrySpawn     ; inactive → try spawn
+            ; Ship: decrement depth (flies from horizon toward player)
+            lda    ObjArray+S_Nature,x
+            cmp    #SHIP_NATURE
+            bne    :enMove         ; future: trident movement here
+            lda    ObjArray+S_Profondeur,x
+            dec
+            bpl    :enStore
+            lda    #$FFFF          ; passed player → deactivate
+:enStore    sta    ObjArray+S_Profondeur,x
+            bra    :enNext
+:enMove     ; default enemy movement: approach (decrement depth)
+            lda    ObjArray+S_Profondeur,x
+            dec
+            bpl    :enStore
+            lda    #$FFFF
+            bra    :enStore
+
+:enTrySpawn jsr    ALEA
+            and    #$FF
+            cmp    #$F3            ; ~5% chance per slot per frame
+            bcc    :enNext
+            ; Spawn a ship
+            lda    #SHIP_NATURE
+            sta    ObjArray+S_Nature,x
+            lda    #$60            ; altitude $60 (FTA's ship altitude)
+            sta    ObjArray+S_Altitude,x
+            lda    #14             ; spawn at far depth (flies toward player)
+            sta    ObjArray+S_Profondeur,x
+            ; Horizontal: near player's current X position ±32
+            jsr    ALEA
+            and    #$3F            ; 0-63
+            sec
+            sbc    #$20            ; -32 to +31
+            clc
+            adc    Coordonnee_X
+            sta    ObjArray+S_Coor_Hori,x
+
+:enNext     txa
+            clc
+            adc    #OBJ_SIZE
+            tax
+            cpx    #BULLET_START*OBJ_SIZE
+            bcc    :enLoop
 
             ; --- Bullet slots (12-15): move toward horizon ---
 :saLoop2    lda    ObjArray+S_Profondeur,x
@@ -997,6 +1047,8 @@ Print_Shape
             beq    :psBush
             cmp    #BULLET_NATURE
             beq    :psBullet
+            cmp    #SHIP_NATURE
+            beq    :psShip
             brl    :psSkip           ; skip unknown natures
 
 :psTree     lda    ObjArray+S_Profondeur,x
@@ -1026,6 +1078,14 @@ Print_Shape
             BCSL   :psSkip
             clc
             adc    #51               ; bullet entries: 51-61
+            sta    _Nbr_Shape
+            bra    :psProject
+
+:psShip     lda    ObjArray+S_Profondeur,x
+            cmp    #15               ; Ship has 15 entries (depths 0-14)
+            BCSL   :psSkip
+            clc
+            adc    #92               ; Ship entries: 92-106
             sta    _Nbr_Shape
 
 :psProject  ; === Horizontal projection ===
