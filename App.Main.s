@@ -861,20 +861,36 @@ Shape_Action
             and    #$FF
             cmp    #$FC            ; ~1.5% chance to spawn per slot
             bcc    :saNext
-            ; Spawn at the horizon
+            ; Random nature: tree(0), rock(1), bush(2), rock(3→1)
+            jsr    ALEA
+            and    #$03              ; 0-3
+            cmp    #3
+            bcc    :natOk
+            lda    #1                ; 3 → rock (50% rocks, 25% tree, 25% bush)
+:natOk      sta    ObjArray+S_Nature,x
+            ; Rocks fly in the sky; trees/bushes on ground
+            lda    ObjArray+S_Nature,x
+            cmp    #1
+            bne    :onGround
+            ; FTA rock altitude: (ALEA & $FF) >> 3 + $38 → range $38-$57
+            jsr    ALEA
+            and    #$FF
+            lsr
+            lsr
+            lsr                       ; 0-31
+            clc
+            adc    #$38              ; altitude $38-$57 (56-87)
+            sta    ObjArray+S_Altitude,x
+            lda    #7                ; Pierre has 8 entries (depth 0-7)
+            bra    :setDepth
+:onGround   stz    ObjArray+S_Altitude,x
             lda    #15
-            sta    ObjArray+S_Profondeur,x
-            ; Random nature: tree (0) or bush (2)
+:setDepth   sta    ObjArray+S_Profondeur,x
+            ; Random horizontal position: ±64 around view center
             jsr    ALEA
-            and    #$01              ; 0 or 1
-            asl                       ; 0 or 2
-            sta    ObjArray+S_Nature,x
-            stz    ObjArray+S_Altitude,x ; on the ground
-            ; Random horizontal position: ±128 around view center
-            jsr    ALEA
-            and    #$FF            ; 0-255
+            and    #$7F            ; 0-127
             sec
-            sbc    #$80            ; -128 to +127 (16-bit: $FF80-$007F)
+            sbc    #$40            ; -64 to +63
             clc
             adc    Coordonnee_X
             sta    ObjArray+S_Coor_Hori,x
@@ -954,11 +970,6 @@ Tir_Action
             clc
             adc    Coordonnee_X
             sta    ObjArray+S_Coor_Hori,x
-            ; DEBUG: flash border green to confirm bullet spawned
-            sep    #$20
-            lda    #$0C
-            stal   $E0C034
-            rep    #$20
             rts
 
 ; =====================================================================
@@ -980,6 +991,8 @@ Print_Shape
             ; Determine shape number from nature + depth
             lda    ObjArray+S_Nature,x
             beq    :psTree
+            cmp    #1
+            beq    :psRock
             cmp    #2
             beq    :psBush
             cmp    #BULLET_NATURE
@@ -989,6 +1002,14 @@ Print_Shape
 :psTree     lda    ObjArray+S_Profondeur,x
             clc
             adc    #24               ; tree entries: 24-39
+            sta    _Nbr_Shape
+            bra    :psProject
+
+:psRock     lda    ObjArray+S_Profondeur,x
+            cmp    #8                ; Pierre has 8 entries (depths 0-7)
+            BCSL   :psSkip
+            clc
+            adc    #62               ; Pierre entries: 62-69
             sta    _Nbr_Shape
             bra    :psProject
 
@@ -1235,7 +1256,7 @@ SetupPalettes
             stal   SHR_PALETTES+$04
             lda    #$0449           ; 3: blue
             stal   SHR_PALETTES+$06
-            lda    #$0EEA           ; 4: pale warm cream (checker light)
+            lda    #$0ADA           ; 4: light green (checker light)
             stal   SHR_PALETTES+$08
             lda    #$0092           ; 5: green
             stal   SHR_PALETTES+$0A
@@ -1255,7 +1276,7 @@ SetupPalettes
             stal   SHR_PALETTES+$18
             lda    #$0062           ; D: dark green
             stal   SHR_PALETTES+$1A
-            lda    #$0AA5           ; E: medium sage (checker dark)
+            lda    #$07A7           ; E: medium green (checker dark)
             stal   SHR_PALETTES+$1C
             lda    #$0FFF           ; F: white
             stal   SHR_PALETTES+$1E
@@ -1284,97 +1305,86 @@ SetupPalettes
             bne    :cppal
 
             ; Palette 1: swap colors $4 and $E for checkerboard alternation
-            lda    #$0EEA             ; color $4 value → palette 1 color $E
+            lda    #$0ADA             ; color $4 value → palette 1 color $E
             stal   SHR_PALETTES+$3C   ; palette 1 ($20) + color $E ($1C)
-            lda    #$0AA5             ; color $E value → palette 1 color $4
+            lda    #$07A7             ; color $E value → palette 1 color $4
             stal   SHR_PALETTES+$28   ; palette 1 ($20) + color $4 ($08)
 
-            ; Sky gradient: set colors 0, $4, $E in palettes 4-15
-            ; FTA's Install_Color: dark blue near horizon → bright warm mid-sky → dark at top
-            ; Color 0 = sky background (our sky pixels are 0)
-            ; Colors $4/$E = sky versions (so checker colors don't bleed into sky)
+            ; Sky gradient: arcade Stage 1 — green near horizon, lavender above
+            ; Color 0 = sky background, $4/$E = sky versions for mountain blending
 
-            ; Palette 4 (near horizon): dark muted blue
-            lda    #$0225
+            ; Sky gradient: arcade Stage 1 — smooth green → lavender
+            ; 12 palettes (4-15) for gradual transition
+
+            ; Sky gradient: vivid green at horizon → lavender
+
+            ; Palette 4 (at horizon): strong green
+            lda    #$05C6
             stal   SHR_PALETTES+$80        ; color 0
             stal   SHR_PALETTES+$88        ; color $4
             stal   SHR_PALETTES+$9C        ; color $E
 
-            ; Palette 5
-            lda    #$0226
+            ; Palette 5: bright green
+            lda    #$06C7
             stal   SHR_PALETTES+$A0        ; color 0
-            stal   SHR_PALETTES+$BC        ; color $E
-            lda    #$0227
             stal   SHR_PALETTES+$A8        ; color $4
+            stal   SHR_PALETTES+$BC        ; color $E
 
-            ; Palette 6
-            lda    #$0227
+            ; Palette 6: lighter green
+            lda    #$07B8
             stal   SHR_PALETTES+$C0        ; color 0
             stal   SHR_PALETTES+$C8        ; color $4
             stal   SHR_PALETTES+$DC        ; color $E
 
-            ; Palette 7
-            lda    #$0228
+            ; Palette 7: green-teal
+            lda    #$08A9
             stal   SHR_PALETTES+$E0        ; color 0
-            stal   SHR_PALETTES+$FC        ; color $E
-            lda    #$0229
             stal   SHR_PALETTES+$E8        ; color $4
+            stal   SHR_PALETTES+$FC        ; color $E
 
-            ; Palette 8
-            lda    #$022A
+            ; Palette 8: teal
+            lda    #$099A
             stal   SHR_PALETTES+$100       ; color 0
-            stal   SHR_PALETTES+$11C       ; color $E
-            lda    #$022B
             stal   SHR_PALETTES+$108       ; color $4
+            stal   SHR_PALETTES+$11C       ; color $E
 
-            ; Palette 9
-            lda    #$022C
+            ; Palette 9: teal-purple
+            lda    #$0A9B
             stal   SHR_PALETTES+$120       ; color 0
-            stal   SHR_PALETTES+$13C       ; color $E
-            lda    #$022D
             stal   SHR_PALETTES+$128       ; color $4
+            stal   SHR_PALETTES+$13C       ; color $E
 
-            ; Palette 10
-            lda    #$022E
+            ; Palette 10: blue-lavender
+            lda    #$0B9C
             stal   SHR_PALETTES+$140       ; color 0
-            stal   SHR_PALETTES+$15C       ; color $E
-            lda    #$033D
             stal   SHR_PALETTES+$148       ; color $4
+            stal   SHR_PALETTES+$15C       ; color $E
 
-            ; Palette 11
-            lda    #$044C
+            ; Palette 11: light lavender
+            lda    #$0B9D
             stal   SHR_PALETTES+$160       ; color 0
-            stal   SHR_PALETTES+$17C       ; color $E
-            lda    #$055B
             stal   SHR_PALETTES+$168       ; color $4
+            stal   SHR_PALETTES+$17C       ; color $E
 
-            ; Palette 12
-            lda    #$066A
+            ; Palette 12: medium lavender
+            lda    #$0C9E
             stal   SHR_PALETTES+$180       ; color 0
-            stal   SHR_PALETTES+$19C       ; color $E
-            lda    #$0779
             stal   SHR_PALETTES+$188       ; color $4
+            stal   SHR_PALETTES+$19C       ; color $E
 
-            ; Palette 13
-            lda    #$0888
+            ; Palette 13: lavender
+            lda    #$0CAE
             stal   SHR_PALETTES+$1A0       ; color 0
-            stal   SHR_PALETTES+$1BC       ; color $E
-            lda    #$0997
             stal   SHR_PALETTES+$1A8       ; color $4
+            stal   SHR_PALETTES+$1BC       ; color $E
 
-            ; Palette 14
-            lda    #$0AA6
-            stal   SHR_PALETTES+$1C0       ; color 0
-            stal   SHR_PALETTES+$1DC       ; color $E
-            lda    #$0BB5
-            stal   SHR_PALETTES+$1C8       ; color $4
-
-            ; Palette 15 (mid-sky, brightest)
-            lda    #$0CC4
-            stal   SHR_PALETTES+$1E0       ; color 0
-            stal   SHR_PALETTES+$1FC       ; color $E
-            lda    #$0DD3
-            stal   SHR_PALETTES+$1E8       ; color $4
+            ; Palettes 14-15: same lavender
+            stal   SHR_PALETTES+$1C0       ; pal 14 color 0
+            stal   SHR_PALETTES+$1C8       ; pal 14 color $4
+            stal   SHR_PALETTES+$1DC       ; pal 14 color $E
+            stal   SHR_PALETTES+$1E0       ; pal 15 color 0
+            stal   SHR_PALETTES+$1E8       ; pal 15 color $4
+            stal   SHR_PALETTES+$1FC       ; pal 15 color $E
 
             ; Set color 1 to black in sky palettes (4-15) for sidebar strip
             lda    #$0000
@@ -2206,28 +2216,18 @@ Table_Vitesse
             ds    4,$03               ; far right: speed +3
 
 ; Table_Ciel — sky gradient palette assignments per row
-; Read from horizon downward (row 137→27). Each byte = palette number.
-; Matches FTA's SPACE.S: palettes 4-15 create blue gradient.
+; Read from horizon upward. Arcade Stage 1: green near mountains → lavender.
 Table_Ciel
-            ds    2,6                ; near horizon: medium blue
-            ds    3,7
-            ds    4,8
-            ds    5,9
-            ds    6,10
-            ds    6,11
-            ds    7,12
-            ds    7,13
-            ds    8,14
-            ds    8,15               ; peak brightness
-            ds    8,14
-            ds    7,13
-            ds    7,12
-            ds    6,11
-            ds    6,10
-            ds    5,9
-            ds    5,8
-            ds    5,7
-            ds    5,6
+            ds    2,4                ; horizon: strong green
+            ds    3,5                ; bright green
+            ds    3,6                ; lighter green
+            ds    3,7                ; green-teal
+            ds    2,8                ; teal
+            ds    2,9                ; teal-purple
+            ds    2,10               ; blue-lavender
+            ds    2,11               ; light lavender
+            ds    2,12               ; medium lavender
+            ds    119,13             ; lavender (rest of sky)
             ds    5,5
             ds    5,4                ; top: darkest
             ds    28,4               ; padding to cover max 140 sky rows

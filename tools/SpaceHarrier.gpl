@@ -1,0 +1,20 @@
+GIMP Palette
+Name: Space Harrier GS
+Columns: 16
+#
+  0   0   0	0 Black/Transparent
+  0   0   0	1 Black/Sidebar
+ 68 102 102	2 Blue-grey
+ 68  68 153	3 Blue
+238 238 170	4 Pale Cream (Checker)
+  0 153  34	5 Green
+102  68   0	6 Red-brown
+102 153 153	7 Blue-grey
+221 153  68	8 Orange/Skin
+255 221  68	9 Yellow/Hair
+221  68   0	A Red-orange/Shirt
+102 153 221	B Medium Blue/Pants
+  0 221  68	C Green Highlight
+  0 102  34	D Dark Green
+170 170  85	E Sage (Checker)
+255 255 255	F White
