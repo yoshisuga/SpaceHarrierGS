@@ -121,6 +121,9 @@ Taille          equ  16
             stz    FrameTimer
             stz    QuitFlag
             jsr    InitObjects
+
+            rep    #$30
+
             jsr    INIT_MOUSE
 
             ; One-time clear of SHR screen so sky pixels are color 0
@@ -905,45 +908,59 @@ Shape_Action
             cpx    #SCENERY_END*OBJ_SIZE
             bcc    :saLoop
 
-            ; --- Enemy slots (8-11): ships fly toward player ---
+            ; --- Enemy slots (8-11): move active enemies every frame ---
 :enLoop     lda    ObjArray+S_Profondeur,x
-            bmi    :enTrySpawn     ; inactive → try spawn
-            ; Ship: decrement depth (flies from horizon toward player)
+            bmi    :enNext         ; inactive → skip
             lda    ObjArray+S_Nature,x
+            and    #$00FF          ; mask off speed in high byte
             cmp    #SHIP_NATURE
-            bne    :enMove         ; future: trident movement here
-            lda    ObjArray+S_Profondeur,x
-            dec
-            bpl    :enStore
-            lda    #$FFFF          ; passed player → deactivate
-:enStore    sta    ObjArray+S_Profondeur,x
-            bra    :enNext
-:enMove     ; default enemy movement: approach (decrement depth)
-            lda    ObjArray+S_Profondeur,x
-            dec
-            bpl    :enStore
-            lda    #$FFFF
-            bra    :enStore
+            bne    :enNext
 
-:enTrySpawn jsr    ALEA
-            and    #$FF
-            cmp    #$F3            ; ~5% chance per slot per frame
-            bcc    :enNext
-            ; Spawn a ship
-            lda    #SHIP_NATURE
-            sta    ObjArray+S_Nature,x
-            lda    #$60            ; altitude $60 (FTA's ship altitude)
-            sta    ObjArray+S_Altitude,x
-            lda    #14             ; spawn at far depth (flies toward player)
-            sta    ObjArray+S_Profondeur,x
-            ; Horizontal: near player's current X position ±32
-            jsr    ALEA
-            and    #$3F            ; 0-63
-            sec
-            sbc    #$20            ; -32 to +31
+            ; Apply horizontal drift from ShipXCurve
+            lda    ObjArray+S_Profondeur,x
+            tay
+            lda    ShipXCurve,y
+            and    #$00FF           ; curve velocity (unsigned magnitude)
+            sta    _tempAlt
+            lda    ObjArray+S_Altitude,x
+            and    #$FF00           ; high byte = direction ($FF=left, $01=right)
+            beq    :enNoDrift
+            bmi    :enDriftNeg
+            ; Positive direction: add curve value
+            lda    ObjArray+S_Coor_Hori,x
             clc
-            adc    Coordonnee_X
+            adc    _tempAlt
             sta    ObjArray+S_Coor_Hori,x
+            bra    :enNoDrift
+:enDriftNeg ; Negative direction: subtract curve value
+            lda    ObjArray+S_Coor_Hori,x
+            sec
+            sbc    _tempAlt
+            sta    ObjArray+S_Coor_Hori,x
+:enNoDrift
+
+            ; Advance depth: decrement by speed (high byte of S_Nature)
+            lda    ObjArray+S_Nature,x
+            xba
+            and    #$00FF           ; speed = depth steps per frame
+            sta    _tempAlt
+            lda    ObjArray+S_Profondeur,x
+            sec
+            sbc    _tempAlt         ; depth -= speed
+            bpl    :enAlive
+            lda    #$FFFF          ; passed player → deactivate
+            sta    ObjArray+S_Profondeur,x
+            bra    :enNext
+:enAlive    sta    ObjArray+S_Profondeur,x
+            ; Update altitude from curve table
+            tay
+            lda    ShipAltCurve,y
+            and    #$00FF
+            sta    _tempAlt
+            lda    ObjArray+S_Altitude,x
+            and    #$FF00
+            ora    _tempAlt
+            sta    ObjArray+S_Altitude,x
 
 :enNext     txa
             clc
@@ -952,7 +969,42 @@ Shape_Action
             cpx    #BULLET_START*OBJ_SIZE
             bcc    :enLoop
 
+            ; --- Wave spawn: periodically spawn a formation of 4 ships ---
+            lda    WaveTimer
+            beq    :waveSpawn
+            dec    WaveTimer
+            bra    :wvDone
+:waveSpawn  lda    #90              ; ~1.5 seconds between waves
+            sta    WaveTimer
+            ldx    #ENEMY_START*OBJ_SIZE
+            ldy    #0               ; wave slot index (0,2,4,6)
+:wvLoop     ; DEBUG: force overwrite regardless of occupancy
+            ; Spawn ship: high byte=speed (1=normal), low byte=nature
+            lda    #$0100+SHIP_NATURE
+            sta    ObjArray+S_Nature,x
+            lda    #14              ; start at far depth (horizon)
+            sta    ObjArray+S_Profondeur,x
+            ; Altitude: low byte from curve, high byte = direction sign
+            lda    ShipAltCurve+14
+            and    #$00FF
+            ora    WaveShipDir,y
+            sta    ObjArray+S_Altitude,x
+            ; Horizontal: staggered positions across screen
+            lda    WaveShipHori,y
+            clc
+            adc    Coordonnee_X
+            sta    ObjArray+S_Coor_Hori,x
+:wvSkip     txa
+            clc
+            adc    #OBJ_SIZE
+            tax
+            iny
+            iny
+            cpy    #8               ; 4 ships × 2 bytes
+            bcc    :wvLoop
+:wvDone
             ; --- Bullet slots (12-15): move toward horizon ---
+            ldx    #BULLET_START*OBJ_SIZE
 :saLoop2    lda    ObjArray+S_Profondeur,x
             bmi    :saNext2        ; inactive
             inc                     ; bullet moves away from player
@@ -1040,6 +1092,7 @@ Print_Shape
 
             ; Determine shape number from nature + depth
             lda    ObjArray+S_Nature,x
+            and    #$00FF           ; mask off speed byte in high
             beq    :psTree
             cmp    #1
             beq    :psRock
@@ -1163,6 +1216,7 @@ Print_Shape
             ; Row bounds check
             cmp    #200
             bcs    :psSkip8        ; skip if row >= 200 (unsigned wraps too)
+
             rep    #$30
             and    #$00FF
             tax                    ; X = screen row
@@ -1262,6 +1316,7 @@ _Nbr_Shape  ds     2
 _horiDelta  ds     2
 _Colonne_Shape ds  2
 _altOffset  ds  2
+_tempAlt    ds  2
 
 ; =====================================================================
 ; SetupLoadPalette — minimal palette for load indicator bar
@@ -2296,6 +2351,63 @@ Table_Ciel
 ; Object array — MAX_OBJECTS slots × OBJ_SIZE bytes
 ; =====================================================================
 ObjArray    ds     MAX_OBJECTS*OBJ_SIZE
+
+WaveTimer   da     0                ; 0 = spawn wave immediately on first frame
+ShipMoveCount da   0                ; (unused, kept for alignment)
+
+; Ship altitude curve indexed by depth (0=close, 14=far)
+; Low at horizon, rises to peak mid-flight, descends as it passes player
+ShipAltCurve
+            dfb    $20              ; depth 0: low (swooping past)
+            dfb    $28              ; depth 1
+            dfb    $35              ; depth 2
+            dfb    $40              ; depth 3
+            dfb    $4A              ; depth 4
+            dfb    $55              ; depth 5: rising
+            dfb    $5E              ; depth 6
+            dfb    $65              ; depth 7: peak
+            dfb    $60              ; depth 8
+            dfb    $58              ; depth 9: descending
+            dfb    $4E              ; depth 10
+            dfb    $42              ; depth 11
+            dfb    $38              ; depth 12
+            dfb    $30              ; depth 13: low at horizon
+            dfb    $2A              ; depth 14: spawn altitude
+
+; Wave formation: 4 ships, horizontal offsets from Coordonnee_X
+WaveShipHori
+            da     $FFD0            ; ship 0: -48 (left)
+            da     $FFE8            ; ship 1: -24 (center-left)
+            da     $0018            ; ship 2: +24 (center-right)
+            da     $0030            ; ship 3: +48 (right)
+
+; Wave formation: direction sign (stored in high byte of S_Altitude)
+; $0100 = drift right, $FF00 = drift left
+WaveShipDir
+            da     $0100            ; ship 0: drift right
+            da     $0100            ; ship 1: drift right
+            da     $FF00            ; ship 2: drift left
+            da     $FF00            ; ship 3: drift left
+
+; Ship horizontal velocity curve indexed by depth (0=close, 14=far)
+; Magnitude only — direction comes from WaveShipDir
+; Starts slow at horizon, accelerates as ships get closer
+ShipXCurve
+            dfb    $06              ; depth 0: fast (close, swooping past)
+            dfb    $06              ; depth 1
+            dfb    $05              ; depth 2
+            dfb    $05              ; depth 3
+            dfb    $04              ; depth 4
+            dfb    $04              ; depth 5
+            dfb    $03              ; depth 6
+            dfb    $03              ; depth 7: mid-flight
+            dfb    $02              ; depth 8
+            dfb    $02              ; depth 9
+            dfb    $02              ; depth 10
+            dfb    $01              ; depth 11
+            dfb    $01              ; depth 12
+            dfb    $01              ; depth 13
+            dfb    $00              ; depth 14: stationary at spawn
 
 ; =====================================================================
 ; Decalage_Y — perspective scaling per depth level (FTA's SPACE.S)

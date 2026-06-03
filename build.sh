@@ -56,4 +56,7 @@ add "$SRC/DRAGON/DER.SHP"   /s/DRAGON/DER.SHP   /s/DRAGON
 add "$SRC/DRAGON/MID.SHP"   /s/DRAGON/MID.SHP   /s/DRAGON
 add "$SRC/DRAGON/BACK.SHP"  /s/DRAGON/BACK.SHP  /s/DRAGON
 
+echo "==> Copying disk image to iCloud Drive..."
+cp "$DISK" "$HOME/Library/Mobile Documents/com~apple~CloudDocs/SpaceHarrier.2mg"
+
 echo "==> Done. $APP_NAME + assets on the disk."
