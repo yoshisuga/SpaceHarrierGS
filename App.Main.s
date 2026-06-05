@@ -60,6 +60,7 @@ Face_Shape      equ  $0C5004
 Der_Shape       equ  $0C7004
 Mid_Shape       equ  $0C9004
 Back_Shape      equ  $0CB004
+Sidebar_Data    equ  $0D0000
 
 ; === Shape counts ===
 Nb_Tree         equ  16
@@ -129,32 +130,10 @@ Taille          equ  16
             ; One-time clear of SHR screen so sky pixels are color 0
             jsr    ClearScreen
 
-            ; Fill right 32 bytes of every row with $11 (color 1 = sidebar)
-            ; Color 1 is set to black in sky palettes so the strip stays dark.
-            ldx    #0
-            lda    #$1111
-:sidebar    stal   $E12000+128,x       ; byte 128
-            stal   $E12000+130,x
-            stal   $E12000+132,x
-            stal   $E12000+134,x
-            stal   $E12000+136,x
-            stal   $E12000+138,x
-            stal   $E12000+140,x
-            stal   $E12000+142,x
-            stal   $E12000+144,x
-            stal   $E12000+146,x
-            stal   $E12000+148,x
-            stal   $E12000+150,x
-            stal   $E12000+152,x
-            stal   $E12000+154,x
-            stal   $E12000+156,x
-            stal   $E12000+158,x       ; byte 158-159
-            txa
-            clc
-            adc    #160                  ; next row
-            tax
-            cpx    #160*200              ; all 200 rows
-            bcc    :sidebar
+            ; Blit sidebar graphic from loaded SIDEBAR data to SHR screen
+            ; Source: Sidebar_Data ($0D0000), 32 bytes/row × 200 rows (linear)
+            ; Dest:   SHR screen, bytes 128-159 per row (160 bytes/row)
+            jsr    BlitSidebar
 
             ; Border off: entering game loop
             sep    #$20
@@ -466,6 +445,106 @@ WaitVBL
             bmi    :notVBL           ; wait while bit 7=1 (display active)
             rep    #$20
             rts
+
+; =====================================================================
+; BlitSidebar — copy sidebar graphic to right 32 bytes of each SHR row
+;
+; Source: Sidebar_Data ($0D0000), 32 bytes/row × 200 rows (linear)
+; Dest:   SHR screen $E12000, bytes 128-159 per row
+; Uses X for long indexed loads; saves X, switches to screen X, writes
+; =====================================================================
+BlitSidebar
+            stz    _sbSrcOff          ; source offset in Sidebar_Data
+            stz    _sbDstOff          ; dest offset in SHR screen
+            lda    #200
+            sta    _sbCount
+:sbRow
+            ; Phase 1: load 16 words from source via LDAL,X into temp
+            ldx    _sbSrcOff
+            ldal   Sidebar_Data+0,x
+            sta    _sbTmp+0
+            ldal   Sidebar_Data+2,x
+            sta    _sbTmp+2
+            ldal   Sidebar_Data+4,x
+            sta    _sbTmp+4
+            ldal   Sidebar_Data+6,x
+            sta    _sbTmp+6
+            ldal   Sidebar_Data+8,x
+            sta    _sbTmp+8
+            ldal   Sidebar_Data+10,x
+            sta    _sbTmp+10
+            ldal   Sidebar_Data+12,x
+            sta    _sbTmp+12
+            ldal   Sidebar_Data+14,x
+            sta    _sbTmp+14
+            ldal   Sidebar_Data+16,x
+            sta    _sbTmp+16
+            ldal   Sidebar_Data+18,x
+            sta    _sbTmp+18
+            ldal   Sidebar_Data+20,x
+            sta    _sbTmp+20
+            ldal   Sidebar_Data+22,x
+            sta    _sbTmp+22
+            ldal   Sidebar_Data+24,x
+            sta    _sbTmp+24
+            ldal   Sidebar_Data+26,x
+            sta    _sbTmp+26
+            ldal   Sidebar_Data+28,x
+            sta    _sbTmp+28
+            ldal   Sidebar_Data+30,x
+            sta    _sbTmp+30
+            ; Phase 2: store temp to SHR screen via STAL,X
+            ldx    _sbDstOff
+            lda    _sbTmp+0
+            stal   $E12000+128,x
+            lda    _sbTmp+2
+            stal   $E12000+130,x
+            lda    _sbTmp+4
+            stal   $E12000+132,x
+            lda    _sbTmp+6
+            stal   $E12000+134,x
+            lda    _sbTmp+8
+            stal   $E12000+136,x
+            lda    _sbTmp+10
+            stal   $E12000+138,x
+            lda    _sbTmp+12
+            stal   $E12000+140,x
+            lda    _sbTmp+14
+            stal   $E12000+142,x
+            lda    _sbTmp+16
+            stal   $E12000+144,x
+            lda    _sbTmp+18
+            stal   $E12000+146,x
+            lda    _sbTmp+20
+            stal   $E12000+148,x
+            lda    _sbTmp+22
+            stal   $E12000+150,x
+            lda    _sbTmp+24
+            stal   $E12000+152,x
+            lda    _sbTmp+26
+            stal   $E12000+154,x
+            lda    _sbTmp+28
+            stal   $E12000+156,x
+            lda    _sbTmp+30
+            stal   $E12000+158,x
+            ; Advance offsets
+            lda    _sbSrcOff
+            clc
+            adc    #32                ; 32 bytes per sidebar row
+            sta    _sbSrcOff
+            lda    _sbDstOff
+            clc
+            adc    #160               ; 160 bytes per screen row
+            sta    _sbDstOff
+            dec    _sbCount
+            beq    :sbDone
+            brl    :sbRow
+:sbDone     rts
+
+_sbSrcOff   ds     2
+_sbDstOff   ds     2
+_sbCount    ds     2
+_sbTmp      ds     32
 
 ; =====================================================================
 ; ClearScreen — clear full SHR screen via STAL
@@ -2489,6 +2568,8 @@ AssetTbl
             adrl   _pMID
             adrl   $0CB000         ; DRAGON/BACK.SHP
             adrl   _pBACK
+            adrl   $0D0000         ; SIDEBAR
+            adrl   _pSIDEBAR
             adrl   0               ; sentinel
             adrl   0
 
@@ -2531,6 +2612,8 @@ _pMID       da    14
             asc   'DRAGON/MID.SHP'
 _pBACK      da    15
             asc   'DRAGON/BACK.SHP'
+_pSIDEBAR   da    7
+            asc   'SIDEBAR'
 
 ; =====================================================================
 ; FTA Tables

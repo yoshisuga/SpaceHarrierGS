@@ -31,6 +31,7 @@ add() {
 # Root assets
 add "$SRC/MOUNT"     /s/MOUNT     /s
 add "$SRC/SHAPE.RUN" /s/SHAPE.RUN /s
+add "$SRC/SIDEBAR"   /s/SIDEBAR   /s
 
 # Music
 add "$SRC/MUS/BLUE.WBNK"   /s/MUS/BLUE.WBNK   /s/MUS
