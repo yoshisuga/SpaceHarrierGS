@@ -889,7 +889,7 @@ HandleInput
             stz    QuitFlag
             jsr    READ_MOUSE      ; TEMP: skip mouse to test keyboard
 
-            ; Check ESC key
+            ; Check keys (all 8-bit compares before any REP #$20)
             sep    #$20
             ldal   KBD_DATA
             bpl    :noKey
@@ -898,10 +898,24 @@ HandleInput
             cmp    #$1B              ; ESC
             beq    :doEsc
             cmp    #$20              ; spacebar
-            bne    :noKey
-            rep    #$20
+            beq    :doFire
+            cmp    #'N'              ; 'N' = next stage
+            beq    :nextStg
+            cmp    #'n'
+            beq    :nextStg
+            bra    :noKey
+:doFire     rep    #$20
             lda    #1
             sta    FireFlag
+            bra    :noKey
+:nextStg    rep    #$20
+            lda    CurrentStage
+            inc
+            cmp    #NUM_STAGES
+            bcc    :stgOk
+            lda    #0
+:stgOk      sta    CurrentStage
+            jsr    ApplyStageTheme
             bra    :noKey
 :doEsc      rep    #$20
             lda    #1
@@ -1794,104 +1808,87 @@ SetupPalettes
             cpx    #$20
             bne    :cppal
 
-            ; Palette 1: swap colors $4 and $E for checkerboard alternation
-            lda    #$0ADA             ; color $4 value → palette 1 color $E
-            stal   SHR_PALETTES+$3C   ; palette 1 ($20) + color $E ($1C)
-            lda    #$07A7             ; color $E value → palette 1 color $4
-            stal   SHR_PALETTES+$28   ; palette 1 ($20) + color $4 ($08)
+            ; Apply stage theme (sky gradient + checker colors)
+            jsr    ApplyStageTheme
+            rts
 
-            ; Sky gradient: arcade Stage 1 — green near horizon, lavender above
-            ; Color 0 = sky background, $4/$E = sky versions for mountain blending
+; =====================================================================
+; ApplyStageTheme — apply per-stage palette from StageThemes table
+;
+; Reads CurrentStage, indexes into StageThemes to get:
+;   - 2 checker colors (palette 0 color $4, color $E; palette 1 swapped)
+;   - 12 sky gradient colors (palettes 4-15: color 0, $4, $E)
+;   - Color 1 = black in all sky palettes (sidebar)
+; =====================================================================
+ApplyStageTheme
+            ; Calculate offset into StageThemes: CurrentStage * STAGE_SIZE
+            lda    CurrentStage
+            and    #$00FF
+            ; STAGE_SIZE = 28 bytes (2 checker + 2 padding + 12 sky × 2)
+            asl                        ; ×2
+            sta    _stgOff
+            asl                        ; ×4
+            asl                        ; ×8
+            asl                        ; ×16
+            sec
+            sbc    _stgOff             ; ×16 - ×2 = ×14
+            asl                        ; ×28
+            tax
 
-            ; Sky gradient: arcade Stage 1 — smooth green → lavender
-            ; 12 palettes (4-15) for gradual transition
+            ; Checker colors: first 2 words in theme data
+            lda    StageThemes+0,x     ; checker light color
+            sta    _chkLight
+            stal   SHR_PALETTES+$08    ; pal 0 color $4
+            lda    StageThemes+2,x     ; checker dark color
+            sta    _chkDark
+            stal   SHR_PALETTES+$1C    ; pal 0 color $E
 
-            ; Sky gradient: vivid green at horizon → lavender
+            ; Palette 1: swap checker colors
+            lda    _chkLight
+            stal   SHR_PALETTES+$3C    ; pal 1 color $E
+            lda    _chkDark
+            stal   SHR_PALETTES+$28    ; pal 1 color $4
 
-            ; Palette 4 (at horizon): strong green
-            lda    #$05C6
-            stal   SHR_PALETTES+$80        ; color 0
-            stal   SHR_PALETTES+$88        ; color $4
-            stal   SHR_PALETTES+$9C        ; color $E
-
-            ; Palette 5: bright green
-            lda    #$06C7
-            stal   SHR_PALETTES+$A0        ; color 0
-            stal   SHR_PALETTES+$A8        ; color $4
-            stal   SHR_PALETTES+$BC        ; color $E
-
-            ; Palette 6: lighter green
-            lda    #$07B8
-            stal   SHR_PALETTES+$C0        ; color 0
-            stal   SHR_PALETTES+$C8        ; color $4
-            stal   SHR_PALETTES+$DC        ; color $E
-
-            ; Palette 7: green-teal
-            lda    #$08A9
-            stal   SHR_PALETTES+$E0        ; color 0
-            stal   SHR_PALETTES+$E8        ; color $4
-            stal   SHR_PALETTES+$FC        ; color $E
-
-            ; Palette 8: teal
-            lda    #$099A
-            stal   SHR_PALETTES+$100       ; color 0
-            stal   SHR_PALETTES+$108       ; color $4
-            stal   SHR_PALETTES+$11C       ; color $E
-
-            ; Palette 9: teal-purple
-            lda    #$0A9B
-            stal   SHR_PALETTES+$120       ; color 0
-            stal   SHR_PALETTES+$128       ; color $4
-            stal   SHR_PALETTES+$13C       ; color $E
-
-            ; Palette 10: blue-lavender
-            lda    #$0B9C
-            stal   SHR_PALETTES+$140       ; color 0
-            stal   SHR_PALETTES+$148       ; color $4
-            stal   SHR_PALETTES+$15C       ; color $E
-
-            ; Palette 11: light lavender
-            lda    #$0B9D
-            stal   SHR_PALETTES+$160       ; color 0
-            stal   SHR_PALETTES+$168       ; color $4
-            stal   SHR_PALETTES+$17C       ; color $E
-
-            ; Palette 12: medium lavender
-            lda    #$0C9E
-            stal   SHR_PALETTES+$180       ; color 0
-            stal   SHR_PALETTES+$188       ; color $4
-            stal   SHR_PALETTES+$19C       ; color $E
-
-            ; Palette 13: lavender
-            lda    #$0CAE
-            stal   SHR_PALETTES+$1A0       ; color 0
-            stal   SHR_PALETTES+$1A8       ; color $4
-            stal   SHR_PALETTES+$1BC       ; color $E
-
-            ; Palettes 14-15: same lavender
-            stal   SHR_PALETTES+$1C0       ; pal 14 color 0
-            stal   SHR_PALETTES+$1C8       ; pal 14 color $4
-            stal   SHR_PALETTES+$1DC       ; pal 14 color $E
-            stal   SHR_PALETTES+$1E0       ; pal 15 color 0
-            stal   SHR_PALETTES+$1E8       ; pal 15 color $4
-            stal   SHR_PALETTES+$1FC       ; pal 15 color $E
-
-            ; Set color 1 to black in sky palettes (4-15) for sidebar strip
+            ; Sky gradient: 12 colors at offset +4 in theme data
+            ; Each color → palette N: color 0, color $4, color $E
+            ldy    #0                  ; sky palette offset (0-11)
+:skyLoop    lda    StageThemes+4,x     ; sky color for this palette
+            pha
+            ; Compute SHR palette offset: (4+Y) * $20
+            tya
+            clc
+            adc    #4                  ; palette number = 4+Y
+            asl
+            asl
+            asl
+            asl
+            asl                        ; ×32 = palette offset
+            sta    _stgOff
+            pla
+            ; Write to color 0
+            phx
+            ldx    _stgOff
+            stal   SHR_PALETTES,x      ; color 0
+            ; Write to color $4 (offset +$08)
+            stal   SHR_PALETTES+$08,x  ; color $4
+            ; Write to color $E (offset +$1C)
+            stal   SHR_PALETTES+$1C,x  ; color $E
+            ; Color 1 = black (sidebar)
             lda    #$0000
-            stal   SHR_PALETTES+$82        ; palette 4, color 1
-            stal   SHR_PALETTES+$A2        ; palette 5
-            stal   SHR_PALETTES+$C2        ; palette 6
-            stal   SHR_PALETTES+$E2        ; palette 7
-            stal   SHR_PALETTES+$102       ; palette 8
-            stal   SHR_PALETTES+$122       ; palette 9
-            stal   SHR_PALETTES+$142       ; palette 10
-            stal   SHR_PALETTES+$162       ; palette 11
-            stal   SHR_PALETTES+$182       ; palette 12
-            stal   SHR_PALETTES+$1A2       ; palette 13
-            stal   SHR_PALETTES+$1C2       ; palette 14
-            stal   SHR_PALETTES+$1E2       ; palette 15
+            stal   SHR_PALETTES+$02,x  ; color 1
+            plx
+            inx
+            inx                        ; next sky color in theme data
+            iny
+            cpy    #12
+            bcc    :skyLoop
 
             rts
+
+_stgOff     ds     2
+_chkLight   ds     2
+_chkDark    ds     2
+CurrentStage ds    2
 
 ; =====================================================================
 ; CompileSprites — compile all shapes using FTA's sprite compiler
@@ -2614,6 +2611,100 @@ _pBACK      da    15
             asc   'DRAGON/BACK.SHP'
 _pSIDEBAR   da    7
             asc   'SIDEBAR'
+
+; =====================================================================
+; Stage Themes — per-stage palette data
+;
+; Each stage: 28 bytes
+;   +0: checker light color (IIgs $0RGB) — palette 0 color $4
+;   +2: checker dark color  (IIgs $0RGB) — palette 0 color $E
+;   +4: 12 sky gradient colors (palettes 4-15, horizon→top)
+;
+; STAGE_SIZE = 28
+; =====================================================================
+STAGE_SIZE  equ    28
+NUM_STAGES  equ    5
+
+StageThemes
+; --- Stage 1: Moot (green/cream checker, green→lavender sky) ---
+            da     $0ADA              ; checker light: pale green
+            da     $07A7              ; checker dark: sage
+            da     $05C6              ; sky 4 (horizon): strong green
+            da     $06C7              ; sky 5: bright green
+            da     $07B8              ; sky 6: lighter green
+            da     $08A9              ; sky 7: green-teal
+            da     $099A              ; sky 8: teal
+            da     $0A9B              ; sky 9: teal-purple
+            da     $0B9C              ; sky 10: blue-lavender
+            da     $0B9D              ; sky 11: light lavender
+            da     $0C9E              ; sky 12: medium lavender
+            da     $0CAE              ; sky 13: lavender
+            da     $0CAE              ; sky 14: lavender
+            da     $0CAE              ; sky 15: lavender
+
+; --- Stage 2: Geeza (blue/white checker, blue→pink sky) ---
+            da     $0DAF              ; checker light: light blue
+            da     $068B              ; checker dark: med blue
+            da     $04A8              ; sky 4: deep blue
+            da     $05A9              ; sky 5: blue
+            da     $069A              ; sky 6: blue-teal
+            da     $079B              ; sky 7
+            da     $08AC              ; sky 8: lighter blue
+            da     $09BD              ; sky 9
+            da     $0ABD              ; sky 10
+            da     $0BCE              ; sky 11: pink-blue
+            da     $0CCE              ; sky 12
+            da     $0DDF              ; sky 13: pink
+            da     $0DDF              ; sky 14
+            da     $0DDF              ; sky 15
+
+; --- Stage 3: Amar (red/orange checker, red→purple sky) ---
+            da     $0FB6              ; checker light: bright orange
+            da     $0A63              ; checker dark: dark red
+            da     $0944              ; sky 4: dark red
+            da     $0A55              ; sky 5
+            da     $0B56              ; sky 6: red
+            da     $0B67              ; sky 7
+            da     $0C78              ; sky 8
+            da     $0C79              ; sky 9: reddish purple
+            da     $0D8A              ; sky 10
+            da     $0D8B              ; sky 11: purple
+            da     $0E9C              ; sky 12
+            da     $0EAD              ; sky 13: blue-purple
+            da     $0EAD              ; sky 14
+            da     $0EAD              ; sky 15
+
+; --- Stage 4: Ceiceil (yellow/brown checker, orange→blue sky) ---
+            da     $0EC8              ; checker light: gold
+            da     $0963              ; checker dark: brown
+            da     $0874              ; sky 4: dark orange
+            da     $0985              ; sky 5: orange
+            da     $0A86              ; sky 6
+            da     $0A97              ; sky 7
+            da     $0BA8              ; sky 8
+            da     $0CA9              ; sky 9
+            da     $0CAA              ; sky 10: teal
+            da     $0DBB              ; sky 11
+            da     $0DBC              ; sky 12
+            da     $0ECD              ; sky 13: blue
+            da     $0ECD              ; sky 14
+            da     $0ECD              ; sky 15
+
+; --- Stage 5: Olisis (grey/white checker, grey→blue sky) ---
+            da     $0CCC              ; checker light: light grey
+            da     $0888              ; checker dark: medium grey
+            da     $0677              ; sky 4: dark grey
+            da     $0788              ; sky 5
+            da     $0899              ; sky 6
+            da     $089A              ; sky 7
+            da     $099B              ; sky 8
+            da     $0A9C              ; sky 9
+            da     $0AAD              ; sky 10
+            da     $0BAE              ; sky 11
+            da     $0BBF              ; sky 12
+            da     $0CCF              ; sky 13: blue-grey
+            da     $0CCF              ; sky 14
+            da     $0CCF              ; sky 15
 
 ; =====================================================================
 ; FTA Tables
