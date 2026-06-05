@@ -4,6 +4,10 @@ This is based on the source code of the FTA Space Harrier demo. Most of the code
 
 The program is now a GS/OS program and should work on a ROM 3 Apple IIGS, which the original demo did not support.
 
+## Requirements
+
+The final game will probably require a IIGS with 4 MB of RAM. It might run on a stock 1.25 MB GS but not sure yet (will try at some point).
+
 ## Development
 
 I've been using Claude Code to build up the program using the FTA implementation as a reference. I'm not an experienced assembly language programmer and I'm defering a lot of the heavy lifting to Claude.
