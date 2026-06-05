@@ -169,6 +169,22 @@ Taille          equ  16
 :gameloop
             ; --- Game logic (doesn't touch screen) ---
 
+            ; Check if player is dead
+            lda    PlayerDead
+            beq    :alive
+
+            ; --- Death state: skip input, play death animation ---
+            ; Still allow ESC
+            jsr    HandleInput
+            lda    QuitFlag
+            BNEL   _quit
+
+            ; Keep scenery moving during death
+            jsr    Shape_Action
+
+            bra    :skipAlive
+
+:alive
             ; Poll keyboard — movement + ESC
             jsr    HandleInput
             lda    QuitFlag
@@ -182,6 +198,8 @@ Taille          equ  16
 
             ; Check for shooting
             jsr    Tir_Action
+
+:skipAlive
 
             ; Lateral ground scroll based on Harrier's X position
             ; FTA: Table_Vitesse[COL] gives speed -3..+3
@@ -201,6 +219,25 @@ Taille          equ  16
             clc
             adc    V_X
             sta    Coordonnee_X
+
+            ; Shift all objects by V_X so they track with the camera
+            ; This makes lateral scrolling purely visual (perspective only)
+            lda    V_X
+            beq    :noShift        ; skip if no scroll
+            ldy    #0
+:shiftLoop  lda    ObjArray+S_Profondeur,y
+            bmi    :shiftNext      ; inactive, skip
+            lda    ObjArray+S_Coor_Hori,y
+            clc
+            adc    V_X
+            sta    ObjArray+S_Coor_Hori,y
+:shiftNext  tya
+            clc
+            adc    #OBJ_SIZE
+            tay
+            cpy    #MAX_OBJECTS*OBJ_SIZE
+            bcc    :shiftLoop
+:noShift
 
             ; Advance ground scroll (forward motion)
             sep    #$20
@@ -313,7 +350,27 @@ _DrawMan    equ    *-3                ; points to the 3-byte JSL operand
             rep    #$20
             jsr    TSBScreen          ; copy aux → display
 
-            ; Animate: cycle Man frames 0-7 (running)
+            ; Hit flash: show red border while timer active
+            lda    HitFlashTimer
+            beq    :noFlash
+            dec
+            sta    HitFlashTimer
+            sep    #$20
+            lda    #$01              ; red border
+            stal   $E0C034
+            rep    #$20
+            bra    :flashDone
+:noFlash    sep    #$20
+            lda    #$00              ; black border (normal)
+            stal   $E0C034
+            rep    #$20
+:flashDone
+
+            ; Animate Harrier sprite
+            lda    PlayerDead
+            bne    :deathAnim
+
+            ; Normal: cycle Man frames 0-7 (running)
             lda    FrameTimer
             inc
             sta    FrameTimer
@@ -325,6 +382,58 @@ _DrawMan    equ    *-3                ; points to the 3-byte JSL operand
             bcc    :setFrame
             lda    #0
 :setFrame   sta    Shape_Man
+            bra    :noAnim
+
+            ; Death animation: cycle frames 13-18, then respawn
+:deathAnim  lda    DeathTimer
+            dec
+            sta    DeathTimer
+            bne    :deathCont
+            ; Death over — respawn
+            stz    PlayerDead
+            stz    Shape_Man          ; back to frame 0 (running)
+            lda    #140               ; reset to default height
+            sta    HarrierRow
+            bra    :noAnim
+:deathCont  ; Fall toward ground
+            lda    HarrierRow
+            cmp    #145               ; ground level during death
+            bcs    :atGround
+            clc
+            adc    #4                 ; fall speed: 4 pixels/frame
+            cmp    #145
+            bcc    :setRow
+            lda    #145               ; clamp to ground
+:setRow     sta    HarrierRow
+:atGround
+            ; Once on the ground, hold frame 17 then recover with 18
+            lda    HarrierRow
+            cmp    #145
+            bcc    :deathFalling
+            ; On ground: show frame 17 (landed), then 18 (crouch-up)
+            lda    DeathTimer
+            cmp    #16                ; last 16 frames = recovery
+            bcs    :holdLanded
+            lda    #18                ; crouch-up frame
+            sta    Shape_Man
+            bra    :noAnim
+:holdLanded lda    #17                ; hold landed pose
+            sta    Shape_Man
+            bra    :noAnim
+
+            ; Still falling: cycle frames 13-17
+:deathFalling
+            lda    FrameTimer
+            inc
+            sta    FrameTimer
+            and    #$0007
+            bne    :noAnim
+            lda    Shape_Man
+            inc
+            cmp    #18                ; past frame 17?
+            bcc    :deathSet
+            lda    #13                ; loop back
+:deathSet   sta    Shape_Man
 :noAnim
 
             ; Update JSL target: TABLE_ROUT + (Shape_Man+1)*4
@@ -730,9 +839,9 @@ Status_Reg  equ   $E1C027
 Mouse_Data  equ   $E1C024
 
 Mouse_Xmin  equ   0
-Mouse_Xmax  equ   128               ; play area is 128 bytes wide
+Mouse_Xmax  equ   116               ; keep sprite within play area (16px wide)
 Mouse_Ymin  equ   0
-Mouse_Ymax  equ   184
+Mouse_Ymax  equ   148               ; keep sprite above bottom of play area
 
 INIT_MOUSE
             rep    #$30
@@ -831,6 +940,7 @@ SCENERY_END   equ  8          ; slots 0-7: scenery (tree/rock/bush)
 ENEMY_START   equ  8          ; slots 8-11: enemies (ship/trident)
 BULLET_START  equ  12         ; slots 12-15: bullets
 BULLET_NATURE equ  $81        ; FTA's bullet nature code
+EXPLO_NATURE  equ  $82        ; explosion (dying enemy)
 SHIP_NATURE   equ  $83        ; FTA's ship nature code
 
 ; =====================================================================
@@ -856,7 +966,21 @@ Shape_Action
             ldx    #0
 :saLoop     lda    ObjArray+S_Profondeur,x
             bmi    :trySpawn       ; $FFFF = inactive → try spawn
-            ; Active: decrease depth (approach player)
+            ; Check if this is an explosion (scenery got shot)
+            lda    ObjArray+S_Nature,x
+            and    #$00FF
+            cmp    #EXPLO_NATURE
+            bne    :saMove
+            ; Explosion countdown
+            lda    ObjArray+S_Altitude,x
+            dec
+            sta    ObjArray+S_Altitude,x
+            bne    :saNext         ; still animating
+            lda    #$FFFF          ; done → deactivate
+            sta    ObjArray+S_Profondeur,x
+            bra    :saNext
+:saMove     ; Active: decrease depth (approach player)
+            lda    ObjArray+S_Profondeur,x
             dec
             bpl    :saStore
             lda    #$FFFF          ; passed player → deactivate
@@ -906,15 +1030,17 @@ Shape_Action
             adc    #OBJ_SIZE
             tax
             cpx    #SCENERY_END*OBJ_SIZE
-            bcc    :saLoop
+            BCCL   :saLoop
 
             ; --- Enemy slots (8-11): move active enemies every frame ---
 :enLoop     lda    ObjArray+S_Profondeur,x
-            bmi    :enNext         ; inactive → skip
+            BMIL   :enNext         ; inactive → skip
             lda    ObjArray+S_Nature,x
             and    #$00FF          ; mask off speed in high byte
+            cmp    #EXPLO_NATURE
+            beq    :enExplo
             cmp    #SHIP_NATURE
-            bne    :enNext
+            BNEL   :enNext
 
             ; Apply horizontal drift from ShipXCurve
             lda    ObjArray+S_Profondeur,x
@@ -962,14 +1088,27 @@ Shape_Action
             ora    _tempAlt
             sta    ObjArray+S_Altitude,x
 
+            bra    :enNext
+
+            ; --- Explosion countdown ---
+:enExplo    lda    ObjArray+S_Altitude,x
+            dec
+            sta    ObjArray+S_Altitude,x
+            bne    :enNext         ; still animating
+            ; Explosion done — deactivate slot
+            lda    #$FFFF
+            sta    ObjArray+S_Profondeur,x
+
 :enNext     txa
             clc
             adc    #OBJ_SIZE
             tax
             cpx    #BULLET_START*OBJ_SIZE
-            bcc    :enLoop
+            BCCL   :enLoop
 
             ; --- Wave spawn: periodically spawn a formation of 4 ships ---
+            lda    PlayerDead
+            bne    :wvDone            ; no new waves during death
             lda    WaveTimer
             beq    :waveSpawn
             dec    WaveTimer
@@ -1018,7 +1157,110 @@ Shape_Action
             tax
             cpx    #MAX_OBJECTS*OBJ_SIZE
             bcc    :saLoop2
+
+            ; --- Bullet-enemy collision detection ---
+            jsr    CheckCollisions
             rts
+
+; =====================================================================
+; CheckCollisions — test each bullet against each enemy
+; Flash border red on hit, deactivate both
+; Now checks bullets vs ALL objects (scenery + enemies)
+; =====================================================================
+CheckCollisions
+            rep    #$30
+            ldx    #BULLET_START*OBJ_SIZE
+:colBullet  lda    ObjArray+S_Profondeur,x
+            BMIL   :colNextB       ; bullet inactive
+            sta    _colBDepth
+            lda    ObjArray+S_Altitude,x
+            and    #$00FF
+            sta    _colBAlt        ; bullet altitude
+
+            ldy    #0              ; check ALL object slots (0-11)
+:colTarget  cpy    #BULLET_START*OBJ_SIZE
+            bcs    :colNextB       ; past last target slot
+            lda    ObjArray+S_Profondeur,y
+            bmi    :colNextT       ; inactive
+            ; Skip bullets and explosions
+            lda    ObjArray+S_Nature,y
+            and    #$00FF
+            cmp    #BULLET_NATURE
+            beq    :colNextT
+            cmp    #EXPLO_NATURE
+            beq    :colNextT
+            sta    _colNature      ; save nature for altitude check
+
+            ; Check depth match (within ±1)
+            lda    ObjArray+S_Profondeur,y
+            sec
+            sbc    _colBDepth
+            bpl    :colDAbs
+            eor    #$FFFF
+            inc
+:colDAbs    cmp    #2
+            bcs    :colNextT
+
+            ; Check horizontal proximity
+            lda    ObjArray+S_Coor_Hori,x    ; bullet X
+            sec
+            sbc    ObjArray+S_Coor_Hori,y    ; target X
+            bpl    :colHAbs
+            eor    #$FFFF
+            inc
+:colHAbs    cmp    #$10            ; within 16 world units?
+            bcs    :colNextT
+
+            ; Altitude check (skip for trees — they're tall)
+            lda    _colNature
+            beq    :colHit         ; nature 0 = tree, skip alt check
+            ; Compare bullet altitude vs target altitude
+            lda    ObjArray+S_Altitude,y
+            and    #$00FF
+            sec
+            sbc    _colBAlt
+            bpl    :colAAbs
+            eor    #$FFFF
+            inc
+:colAAbs    cmp    #$18            ; within 24 altitude units?
+            bcs    :colNextT
+
+:colHit     ; HIT! Kill bullet, convert target to explosion
+            lda    #$FFFF
+            sta    ObjArray+S_Profondeur,x   ; kill bullet
+
+            ; Convert target to explosion
+            lda    #EXPLO_NATURE
+            sta    ObjArray+S_Nature,y
+            lda    #10
+            sta    ObjArray+S_Altitude,y     ; explosion timer
+
+            lda    #8
+            sta    HitFlashTimer
+            bra    :colNextB       ; bullet used up, next bullet
+
+:colNextT   tya
+            clc
+            adc    #OBJ_SIZE
+            tay
+            bra    :colTarget
+
+:colNextB   txa
+            clc
+            adc    #OBJ_SIZE
+            tax
+            cpx    #MAX_OBJECTS*OBJ_SIZE
+            BCCL   :colBullet
+
+            ; Player-enemy collision now handled in Print_Shape
+            rts
+
+_colBDepth  ds     2
+_colBAlt    ds     2
+_colNature  ds     2
+HitFlashTimer da   0               ; frames remaining for hit flash
+PlayerDead    da   0               ; non-zero = death animation active
+DeathTimer    da   0               ; frames remaining in death anim
 
 ; =====================================================================
 ; Tir_Action — spawn bullet when spacebar pressed
@@ -1100,6 +1342,8 @@ Print_Shape
             beq    :psBush
             cmp    #BULLET_NATURE
             beq    :psBullet
+            cmp    #EXPLO_NATURE
+            beq    :psExplo
             cmp    #SHIP_NATURE
             beq    :psShip
             brl    :psSkip           ; skip unknown natures
@@ -1131,6 +1375,14 @@ Print_Shape
             BCSL   :psSkip
             clc
             adc    #51               ; bullet entries: 51-61
+            sta    _Nbr_Shape
+            bra    :psProject
+
+:psExplo    lda    ObjArray+S_Profondeur,x
+            cmp    #11               ; Explo has 11 entries (depths 0-10)
+            BCSL   :psSkip
+            clc
+            adc    #40               ; Explo entries: 40-50
             sta    _Nbr_Shape
             bra    :psProject
 
@@ -1174,7 +1426,7 @@ Print_Shape
             cmp    #$FFE0            ; col >= -32?
             bcs    :psColOk          ; yes — accept (left-edge partial)
             cmp    #$80              ; col >= $80?
-            bcs    :psSkip           ; yes — off right / in sidebar
+            BCSL   :psSkip           ; yes — off right / in sidebar
 :psColOk
             sta    _Colonne_Shape
 
@@ -1219,8 +1471,51 @@ Print_Shape
 
             rep    #$30
             and    #$00FF
+            sta    _screenRow      ; save screen row for collision
             tax                    ; X = screen row
 
+            ; --- Player-enemy collision (uses screen coords) ---
+            lda    PlayerDead
+            bne    :noPlHit        ; already dead
+            lda    _Profondeur
+            cmp    #2
+            bcs    :noPlHit        ; only check depth 0-1
+            ldx    _Exploreur
+            lda    ObjArray+S_Nature,x
+            and    #$00FF
+            cmp    #SHIP_NATURE
+            bne    :noPlHit
+            ; Screen column overlap
+            lda    _Colonne_Shape
+            and    #$00FF
+            sec
+            sbc    HarrierCol
+            bpl    :plhAbs
+            eor    #$FFFF
+            inc
+:plhAbs     cmp    #8              ; within 8 bytes (~16 pixels)
+            bcs    :noPlHit
+            ; Screen row overlap
+            lda    _screenRow
+            sec
+            sbc    HarrierRow
+            bpl    :plvAbs
+            eor    #$FFFF
+            inc
+:plvAbs     cmp    #40             ; within 40 rows (sprite height)
+            bcs    :noPlHit
+            ; HIT! Player is dead
+            lda    #1
+            sta    PlayerDead
+            lda    #48
+            sta    DeathTimer
+            lda    #13
+            sta    Shape_Man
+            ; Kill this enemy
+            lda    #$FFFF
+            sta    ObjArray+S_Profondeur,x
+:noPlHit
+            ldx    _screenRow      ; restore screen row into X
             lda    _Nbr_Shape      ; A = shape number
             ldy    _Colonne_Shape  ; Y = column (byte offset)
             jsr    Draw_Shape
@@ -1316,6 +1611,7 @@ _Nbr_Shape  ds     2
 _horiDelta  ds     2
 _Colonne_Shape ds  2
 _altOffset  ds  2
+_screenRow  ds  2
 _tempAlt    ds  2
 
 ; =====================================================================
@@ -2322,13 +2618,14 @@ V_X          ds   2                  ; lateral scroll velocity (signed)
 ; Table_Vitesse — lateral scroll speed from Harrier X position
 ; Mouse: HarrierCol/2 → index 0-63. 64 entries.
 Table_Vitesse
-            ds    4,$FD               ; far left: speed -3
-            ds    4,$FE               ; speed -2
-            ds    4,$FF               ; speed -1
-            ds    40,$00              ; center: no scroll (wide dead zone)
-            ds    4,$01               ; speed +1
-            ds    4,$02               ; speed +2
-            ds    4,$03               ; far right: speed +3
+            ds    7,$FD               ; far left: speed -3
+            ds    7,$FE               ; speed -2
+            ds    7,$FF               ; speed -1
+            ds    14,$00              ; center: no scroll
+            ds    7,$01               ; speed +1
+            ds    7,$02               ; speed +2
+            ds    7,$03               ; far right: speed +3
+            ds    2,$03               ; padding to cover max index
 
 ; Table_Ciel — sky gradient palette assignments per row
 ; Read from horizon upward. Arcade Stage 1: green near mountains → lavender.
