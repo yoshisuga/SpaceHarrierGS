@@ -23,19 +23,19 @@ SHR_SCREEN    equ  $E12000
 SHR_SCB       equ  $E19D00
 SHR_PALETTES  equ  $E19E00
 
-; === FTA compiled routine addresses ===
+; === FTA compiled routine addresses (banks $44-$4C) ===
 NEWPAGE0        equ  $0F00
-TABLE_ROUT      equ  $10F100     ; dispatch table (bank $10)
-Damier_Rout     equ  $110000     ; compiled checkerboard (bank $11)
-TSB_Rout        equ  $110000
-Buf_SCB         equ  $11FF00
-Clear_Rout      equ  $120000     ; compiled clear routine (bank $12)
-Man_Rout        equ  $130000     ; compiled Harrier sprites (bank $13)
-Mountain_Rout   equ  $140000
-ROUT0           equ  $150000
-ROUT1           equ  $160000
-ROUT2           equ  $170000
-Chiffre_Rout    equ  $180000
+TABLE_ROUT      equ  $44F100     ; dispatch table (bank $44)
+Damier_Rout     equ  $450000     ; compiled checkerboard (bank $45)
+TSB_Rout        equ  $450000
+Buf_SCB         equ  $45FF00
+Clear_Rout      equ  $460000     ; compiled clear routine (bank $46)
+Man_Rout        equ  $470000     ; compiled Harrier sprites (bank $47)
+Mountain_Rout   equ  $480000
+ROUT0           equ  $490000
+ROUT1           equ  $4A0000
+ROUT2           equ  $4B0000
+Chiffre_Rout    equ  $4C0000
 
 ; === FTA game constants ===
 Box_Lgn         equ  $1C
@@ -45,22 +45,22 @@ Box_NbCol       equ  $80
 Clear_NbLgn     equ  $A8-$3C+$11-$E
 
 ; === FTA shape data addresses ===
-Decor_Mountain  equ  $090000
-Tree_Shape      equ  $0A0004
-Explo_Shape     equ  $0A2804
-Tir_Shape       equ  $0A4004
-Pierre_Shape    equ  $0A4404
-Chiffre_Shape   equ  $0A5000
-Ombre_Shape     equ  $0A6004
-Buisson_Shape   equ  $0A7004
-Ship_Shape      equ  $0A8004
-Trident_Shape   equ  $0A9004
-Divers_Shape    equ  $0AA204
-Face_Shape      equ  $0C5004
-Der_Shape       equ  $0C7004
-Mid_Shape       equ  $0C9004
-Back_Shape      equ  $0CB004
-Sidebar_Data    equ  $0D0000
+Decor_Mountain  equ  $400000
+Tree_Shape      equ  $410004
+Explo_Shape     equ  $412804
+Tir_Shape       equ  $414004
+Pierre_Shape    equ  $414404
+Chiffre_Shape   equ  $415000
+Ombre_Shape     equ  $416004
+Buisson_Shape   equ  $417004
+Ship_Shape      equ  $418004
+Trident_Shape   equ  $419004
+Divers_Shape    equ  $41A204
+Face_Shape      equ  $425004
+Der_Shape       equ  $427004
+Mid_Shape       equ  $429004
+Back_Shape      equ  $42B004
+Sidebar_Data    equ  $430000
 
 ; === Shape counts ===
 Nb_Tree         equ  16
@@ -85,31 +85,37 @@ Taille          equ  16
 
             _MTStartUp
 
+            jsr    ClaimMemory       ; tell GS/OS we're using these banks
+
             jsr    SHR_Init
             jsr    SetupLoadPalette
 
             sep    #$20
-            lda    #$01              ; blue = loading assets
+            lda    #$01              ; border 1 = loading assets
             stal   $E0C034
             rep    #$20
             jsr    LoadAssets
 
+            sep    #$20
+            lda    #$02              ; border 2 = checkerboard gen
+            stal   $E0C034
+            rep    #$20
             jsr    ENTER
 
             sep    #$20
-            lda    #$09              ; yellow = compiling sprites
+            lda    #$03              ; border 3 = compiling sprites
             stal   $E0C034
             rep    #$20
             jsr    CompileSprites
 
             sep    #$20
-            lda    #$0F              ; white = setting palettes
+            lda    #$04              ; border 4 = setting palettes
             stal   $E0C034
             rep    #$20
             jsr    SetupPalettes
 
             sep    #$20
-            lda    #$00              ; black = entering game loop
+            lda    #$05              ; border 5 = entering game loop
             stal   $E0C034
             rep    #$20
 
@@ -349,19 +355,54 @@ _DrawMan    equ    *-3                ; points to the 3-byte JSL operand
             lda    PlayerDead
             bne    :deathAnim
 
-            ; Normal: cycle Man frames 0-7 (running)
+            ; Select frame based on position (arcade-style)
+            lda    HarrierRow
+            cmp    #130               ; on/near ground?
+            bcc    :airborne
+
+            ; --- Ground: walking cycle frames 0-7 ---
             lda    FrameTimer
             inc
             sta    FrameTimer
-            and    #$0007             ; new frame every 8 VBLs
-            bne    :noAnim
+            and    #$0003             ; new frame every 4 VBLs
+            BNEL   :noAnim
             lda    Shape_Man
+            cmp    #8                 ; if not in walk range, reset
+            bcs    :resetWalk
             inc
             cmp    #8
             bcc    :setFrame
-            lda    #0
+:resetWalk  lda    #0
 :setFrame   sta    Shape_Man
-            bra    :noAnim
+            brl    :noAnim
+
+            ; --- Airborne: select pose by position ---
+:airborne   lda    HarrierRow
+            cmp    #60                ; high up threshold
+            bcs    :notHigh
+
+            ; High up: check lateral
+            lda    V_X
+            bmi    :highLeft
+            beq    :highCenter
+            lda    #11                ; high + right
+            bra    :setFly
+:highLeft   lda    #12                ; high + left
+            bra    :setFly
+:highCenter lda    #10                ; high + center
+            bra    :setFly
+
+:notHigh    ; Normal altitude: check lateral
+            lda    V_X
+            bmi    :flyLeft
+            beq    :flyCenter
+            lda    #8                 ; leaning right
+            bra    :setFly
+:flyLeft    lda    #9                 ; leaning left
+            bra    :setFly
+:flyCenter  lda    #10                ; center flying
+:setFly     sta    Shape_Man
+            brl    :noAnim
 
             ; Death animation: cycle frames 13-18, then respawn
 :deathAnim  lda    DeathTimer
@@ -2280,6 +2321,33 @@ DrawFileBlock
             rts
 
 ; =====================================================================
+; ClaimMemory — allocate memory from GS/OS so we don't trash OS structures
+;
+; Uses NewHandle with attrFixed+attrAddr+attrLocked to claim specific
+; address ranges before loading assets or compiling sprites into them.
+; =====================================================================
+ClaimMemory
+            ; Allocate all game memory in banks $40-$4D (high banks, away from GS/OS)
+            ; Single block: $400000-$4DFFFF = 14 banks ($0E0000 bytes)
+            pha                        ; result space (handle hi)
+            pha                        ; result space (handle lo)
+            pea    $000E              ; size hi ($0E0000 = 14 × 64KB)
+            pea    $0000              ; size lo
+            lda    MyUserId
+            pha                        ; user ID
+            pea    $C040              ; attrFixed | attrAddr | attrLocked
+            pea    $0040              ; location hi (bank $40)
+            pea    $0000              ; location lo
+            ldx    #$0902             ; NewHandle
+            jsl    $E10000
+            bcc    :ok1
+            ; Allocation failed — halt (border won't show pre-SHR)
+            brk    $01
+:ok1        pla                        ; discard handle lo
+            pla                        ; discard handle hi
+            rts
+
+; =====================================================================
 ; SHR_Init — enable Super Hi-Res, clear screen.
 ; =====================================================================
 SHR_Init
@@ -2400,7 +2468,7 @@ Mountain_Tbl
 ; =====================================================================
 Man_Tbl
 Man_RoutAdr adrl   Man_Rout         ; $00: output addr for compiled code
-Man_ShpAdr  adrl   $0AB004          ; $04: SHAPE.RUN data + skip header
+Man_ShpAdr  adrl   $41B004          ; $04: SHAPE.RUN data + skip header
             adrl   $FFFF00          ; $08: auto-mask
             da     1                ; $0C: TblNb (TABLE_ROUT index)
             da     $30              ; $0E: Nb_Lgn (48 bytes per shape row)
@@ -2529,43 +2597,43 @@ Tbl_Trident
 ; Asset table
 ; =====================================================================
 AssetTbl
-            adrl   $110000         ; MUS/BLUE.WBNK
+            adrl   $450000         ; MUS/BLUE.WBNK (temp, overwritten by sprites)
             adrl   _pBLUEW
-            adrl   $100000         ; MUS/BLUE.MONDAY
+            adrl   $440000         ; MUS/BLUE.MONDAY (temp, overwritten by sprites)
             adrl   _pBLUEM
-            adrl   $0AB000         ; SHAPE.RUN
+            adrl   $41B000         ; SHAPE.RUN
             adrl   _pSHAPER
-            adrl   $090000         ; MOUNT
+            adrl   $400000         ; MOUNT
             adrl   _pMOUNT
-            adrl   $0A0000         ; PIC/TREE.SHAPE
+            adrl   $410000         ; PIC/TREE.SHAPE
             adrl   _pTREE
-            adrl   $0A2800         ; PIC/EXPLO.SHP
+            adrl   $412800         ; PIC/EXPLO.SHP
             adrl   _pEXPLO
-            adrl   $0A4000         ; PIC/TIR.SHP
+            adrl   $414000         ; PIC/TIR.SHP
             adrl   _pTIR
-            adrl   $0A4400         ; PIC/PIERRE.SHP
+            adrl   $414400         ; PIC/PIERRE.SHP
             adrl   _pPIERRE
-            adrl   $0A5000         ; PIC/NUM.SHP
+            adrl   $415000         ; PIC/NUM.SHP
             adrl   _pNUM
-            adrl   $0A6000         ; PIC/OMBRE.SHP
+            adrl   $416000         ; PIC/OMBRE.SHP
             adrl   _pOMBRE
-            adrl   $0A7000         ; PIC/BUISSON.SHP
+            adrl   $417000         ; PIC/BUISSON.SHP
             adrl   _pBUISSO
-            adrl   $0A8000         ; PIC2/SHIP.SHP
+            adrl   $418000         ; PIC2/SHIP.SHP
             adrl   _pSHIP
-            adrl   $0A9000         ; PIC2/TRIDENT.SHP
+            adrl   $419000         ; PIC2/TRIDENT.SHP
             adrl   _pTRIDEN
-            adrl   $0AA200         ; PIC2/DIVERS.SHP
+            adrl   $41A200         ; PIC2/DIVERS.SHP
             adrl   _pDIVERS
-            adrl   $0C5000         ; DRAGON/FACE.SHP
+            adrl   $425000         ; DRAGON/FACE.SHP
             adrl   _pFACE
-            adrl   $0C7000         ; DRAGON/DER.SHP
+            adrl   $427000         ; DRAGON/DER.SHP
             adrl   _pDER
-            adrl   $0C9000         ; DRAGON/MID.SHP
+            adrl   $429000         ; DRAGON/MID.SHP
             adrl   _pMID
-            adrl   $0CB000         ; DRAGON/BACK.SHP
+            adrl   $42B000         ; DRAGON/BACK.SHP
             adrl   _pBACK
-            adrl   $0D0000         ; SIDEBAR
+            adrl   $430000         ; SIDEBAR
             adrl   _pSIDEBAR
             adrl   0               ; sentinel
             adrl   0

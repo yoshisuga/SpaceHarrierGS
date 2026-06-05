@@ -34,7 +34,7 @@ _LIG_ADR0   equ   0
 _NB_LIG     equ   $3C           ; 60 rows
 _LIG_PAS    equ   256
 
-IMAGE       equ   $190000     ; 8 frames × $1E00 = $F000 bytes (banks $19-$19)
+IMAGE       equ   $4D0000     ; 8 frames × $1E00 = $F000 bytes (bank $4D)
 _LONGUEUR   equ   $80*$3C       ; 128 bytes × 60 rows = $1E00 per frame
 
 * =====================================================================
