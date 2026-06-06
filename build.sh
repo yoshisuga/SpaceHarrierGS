@@ -45,6 +45,7 @@ add "$SRC/PIC/PIERRE.SHP"   /s/PIC/PIERRE.SHP   /s/PIC
 add "$SRC/PIC/NUM.SHP"      /s/PIC/NUM.SHP      /s/PIC
 add "$SRC/PIC/OMBRE.SHP"    /s/PIC/OMBRE.SHP    /s/PIC
 add "$SRC/PIC/BUISSON.SHP"  /s/PIC/BUISSON.SHP  /s/PIC
+add "$SRC/PIC/ROBOT.SHP"   /s/PIC/ROBOT.SHP    /s/PIC
 
 # Shapes — PIC2
 add "$SRC/PIC2/SHIP.SHP"    /s/PIC2/SHIP.SHP    /s/PIC2

@@ -60,6 +60,7 @@ Face_Shape      equ  $425004
 Der_Shape       equ  $427004
 Mid_Shape       equ  $429004
 Back_Shape      equ  $42B004
+Robot_Shape     equ  $42C004
 Sidebar_Data    equ  $430000
 
 ; === Shape counts ===
@@ -71,6 +72,7 @@ Nb_Ombre        equ  8
 Nb_Buisson      equ  14
 Nb_Ship         equ  15
 Nb_Trident      equ  9
+Nb_Robot        equ  15
 Nb_Shape        equ  32
 Taille          equ  16
 
@@ -1076,6 +1078,7 @@ BULLET_START  equ  12         ; slots 12-15: bullets
 BULLET_NATURE equ  $81        ; FTA's bullet nature code
 EXPLO_NATURE  equ  $82        ; explosion (dying enemy)
 SHIP_NATURE   equ  $83        ; FTA's ship nature code
+ROBOT_NATURE  equ  $84        ; walking robot enemy
 
 ; =====================================================================
 ; InitObjects — mark all object slots inactive
@@ -1174,9 +1177,16 @@ Shape_Action
             cmp    #EXPLO_NATURE
             beq    :enExplo
             cmp    #SHIP_NATURE
+            beq    :enMove
+            cmp    #ROBOT_NATURE
             BNEL   :enNext
-
-            ; Apply horizontal drift from ShipXCurve
+:enMove
+            ; Robots walk straight — skip drift and altitude curve
+            lda    ObjArray+S_Nature,x
+            and    #$00FF
+            cmp    #ROBOT_NATURE
+            beq    :enAdvance
+            ; Apply horizontal drift from ShipXCurve (ships only)
             lda    ObjArray+S_Profondeur,x
             tay
             lda    ShipXCurve,y
@@ -1198,7 +1208,7 @@ Shape_Action
             sbc    _tempAlt
             sta    ObjArray+S_Coor_Hori,x
 :enNoDrift
-
+:enAdvance
             ; Advance depth: decrement by speed (high byte of S_Nature)
             lda    ObjArray+S_Nature,x
             xba
@@ -1249,15 +1259,31 @@ Shape_Action
             bra    :wvDone
 :waveSpawn  lda    #90              ; ~1.5 seconds between waves
             sta    WaveTimer
+            ; Alternate between ships and robots each wave
+            lda    WaveType
+            eor    #$FFFF
+            sta    WaveType
             ldx    #ENEMY_START*OBJ_SIZE
             ldy    #0               ; wave slot index (0,2,4,6)
-:wvLoop     ; DEBUG: force overwrite regardless of occupancy
-            ; Spawn ship: high byte=speed (1=normal), low byte=nature
-            lda    #$0100+SHIP_NATURE
+            lda    WaveType
+            beq    :wvShips
+            ; --- Robot wave: spawn 1 robot in slot 8 ---
+            lda    #$0100+ROBOT_NATURE
+            sta    ObjArray+S_Nature,x
+            lda    #14
+            sta    ObjArray+S_Profondeur,x
+            lda    WaveShipDir       ; direction only, altitude=0
+            sta    ObjArray+S_Altitude,x
+            lda    Coordonnee_X      ; center of screen
+            sta    ObjArray+S_Coor_Hori,x
+            bra    :wvDone
+            ; --- Ship wave: spawn 4 ships ---
+:wvShips    lda    WaveType          ; always 0 here (ships)
+:wvLoop     lda    #$0100+SHIP_NATURE
             sta    ObjArray+S_Nature,x
             lda    #14              ; start at far depth (horizon)
             sta    ObjArray+S_Profondeur,x
-            ; Altitude: low byte from curve, high byte = direction sign
+            ; Ship: altitude from curve + direction
             lda    ShipAltCurve+14
             and    #$00FF
             ora    WaveShipDir,y
@@ -1480,6 +1506,8 @@ Print_Shape
             beq    :psExplo
             cmp    #SHIP_NATURE
             beq    :psShip
+            cmp    #ROBOT_NATURE
+            beq    :psRobot
             brl    :psSkip           ; skip unknown natures
 
 :psTree     lda    ObjArray+S_Profondeur,x
@@ -1525,6 +1553,14 @@ Print_Shape
             BCSL   :psSkip
             clc
             adc    #92               ; Ship entries: 92-106
+            sta    _Nbr_Shape
+            bra    :psProject
+
+:psRobot    lda    ObjArray+S_Profondeur,x
+            cmp    #15               ; Robot has 15 entries (depths 0-14)
+            BCSL   :psSkip
+            clc
+            adc    #116              ; Robot entries: 116-130
             sta    _Nbr_Shape
 
 :psProject  ; === Horizontal projection ===
@@ -1618,8 +1654,10 @@ Print_Shape
             lda    ObjArray+S_Nature,x
             and    #$00FF
             cmp    #SHIP_NATURE
+            beq    :plhChk
+            cmp    #ROBOT_NATURE
             bne    :noPlHit
-            ; Screen column overlap
+:plhChk     ; Screen column overlap
             lda    _Colonne_Shape
             and    #$00FF
             sec
@@ -2157,6 +2195,27 @@ CompileSprites
             sta    _FrmCnt
             jsr    CompileOneType
 
+            ; --- ROUT2 group: Robot (own bank — large sprites) ---
+            stz    $00
+            sep    #$20
+            lda    #^ROUT2
+            sta    $02
+            stz    $03
+            rep    #$20
+
+            lda    #Tbl_Robot
+            sta    _FrmTblPtr
+            lda    #Robot_Shape
+            sta    _ShpBase
+            sep    #$20
+            lda    #^Robot_Shape
+            sta    _ShpBase+2
+            stz    _ShpBase+3
+            rep    #$20
+            lda    #Nb_Robot
+            sta    _FrmCnt
+            jsr    CompileOneType
+
             ; Restore DP
             lda    #0
             tcd
@@ -2593,6 +2652,23 @@ Tbl_Trident
             da     4476,11,8
             da     4568,7,4
 
+Tbl_Robot
+            da     $0000,$60,$1E    ; depth 0: 60x96
+            da     $0B40,$48,$18    ; depth 1: 48x72
+            da     $1200,$38,$12    ; depth 2: 36x56
+            da     $15F0,$2A,$0E    ; depth 3: 28x42
+            da     $183C,$22,$0C    ; depth 4: 24x34
+            da     $19D4,$1C,$0A    ; depth 5: 20x28
+            da     $1AEC,$17,$08    ; depth 6: 16x23
+            da     $1BA4,$13,$08    ; depth 7: 16x19
+            da     $1C3C,$10,$06    ; depth 8: 12x16
+            da     $1C9C,$0E,$06    ; depth 9: 12x14
+            da     $1CF0,$0B,$06    ; depth 10: 12x11
+            da     $1D32,$09,$04    ; depth 11: 8x9
+            da     $1D56,$08,$04    ; depth 12: 8x8
+            da     $1D76,$06,$04    ; depth 13: 8x6
+            da     $1D8E,$05,$04    ; depth 14: 8x5
+
 ; =====================================================================
 ; Asset table
 ; =====================================================================
@@ -2633,6 +2709,8 @@ AssetTbl
             adrl   _pMID
             adrl   $42B000         ; DRAGON/BACK.SHP
             adrl   _pBACK
+            adrl   $42C000         ; PIC/ROBOT.SHP
+            adrl   _pROBOT
             adrl   $430000         ; SIDEBAR
             adrl   _pSIDEBAR
             adrl   0               ; sentinel
@@ -2677,6 +2755,8 @@ _pMID       da    14
             asc   'DRAGON/MID.SHP'
 _pBACK      da    15
             asc   'DRAGON/BACK.SHP'
+_pROBOT     da    13
+            asc   'PIC/ROBOT.SHP'
 _pSIDEBAR   da    7
             asc   'SIDEBAR'
 
@@ -2892,6 +2972,7 @@ Table_Ciel
 ObjArray    ds     MAX_OBJECTS*OBJ_SIZE
 
 WaveTimer   da     0                ; 0 = spawn wave immediately on first frame
+WaveType    da     0                ; 0 = ships, nonzero = robots
 ShipMoveCount da   0                ; (unused, kept for alignment)
 
 ; Ship altitude curve indexed by depth (0=close, 14=far)
